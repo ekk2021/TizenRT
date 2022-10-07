@@ -226,7 +226,7 @@ static ble_server_gatt_t gatt_profile[] = {
 		.type = BLE_SERVER_GATT_CHARACT, 
 		.uuid = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01, 0x02}, 
 		.uuid_length = 16, 
-		.property = BLE_ATTR_PROP_RWN | BLE_ATTR_PROP_WRITE_NO_RSP, 
+		.property = BLE_ATTR_PROP_RWN | BLE_ATTR_PROP_WRITE_NO_RSP | BLE_ATTR_PROP_INDICATE, 
 		.permission = BLE_ATTR_PERM_R_PERMIT | BLE_ATTR_PERM_W_PERMIT, 
 		.attr_handle = 0x006b, 
 		.cb = utc_cb_charact_a_1, 
@@ -313,7 +313,7 @@ static int ble_connect_common(ble_client_ctx *ctx, ble_addr *addr, bool is_auto)
 	}
 	RMC_LOG(RMC_CLIENT_TAG, "Client State [ %s ]\n", __client_state_str(cli_state));
 
-	attr_handle = 0xff03;
+	attr_handle = 0x006d;
 	ret = ble_client_operation_enable_notification(ctx, attr_handle);
 	if (ret != BLE_MANAGER_SUCCESS) {
 		RMC_LOG(RMC_CLIENT_TAG, "Fail to enable noti handle1[%d]\n", ret);
@@ -321,14 +321,21 @@ static int ble_connect_common(ble_client_ctx *ctx, ble_addr *addr, bool is_auto)
 		RMC_LOG(RMC_CLIENT_TAG, "Success to enable noti handle1.\n");
 	}
 
-	attr_handle = 0x006e;
-	ret = ble_client_operation_enable_notification(ctx, attr_handle);
+	attr_handle = 0x006d;
+	ret = ble_client_operation_enable_indication(ctx, attr_handle);
 	if (ret != BLE_MANAGER_SUCCESS) {
 		RMC_LOG(RMC_CLIENT_TAG, "Fail to enable noti handle2[%d]\n", ret);
 	} else {
 		RMC_LOG(RMC_CLIENT_TAG, "Success to enable noti handle2.\n");
 	}
 
+       attr_handle = 0x006d;
+       ret = ble_client_operation_enable_notification_and_indication(ctx, attr_handle);
+       if (ret != BLE_MANAGER_SUCCESS) {
+               RMC_LOG(RMC_CLIENT_TAG, "Fail to enable noti handle2[%d]\n", ret);
+       } else {
+               RMC_LOG(RMC_CLIENT_TAG, "Success to enable noti handle2.\n");
+       }
 	return 0;
 }
 
@@ -820,6 +827,103 @@ int ble_rmc_main(int argc, char *argv[])
 				goto ble_rmc_done;
 			}
 			RMC_LOG(RMC_SERVER_TAG, "Stop adv ... ok\n");
+		}
+	}
+
+
+	/* Write and Inidicate Test */
+	if (strncmp(argv[1], "loop", 5) == 0) {
+		if (argc == 3 && strncmp(argv[2], "write", 6) == 0) {
+			static int g_packet_size = 2;
+			static int g_packet_count = 10;
+			RMC_LOG(RMC_CLIENT_TAG, "Send %d Bytes packet %d times.\n", g_packet_size, g_packet_count);
+	
+			ble_attr_handle attr_handle = 0x006c;
+			ble_data packet[1] = { 0, };
+			uint8_t packet_data[2] = { 0, };
+		
+			int i;
+			int send_ok = 0;
+			int send_fail = 0;
+			packet->data = packet_data;
+			packet->length = g_packet_size;
+	
+			for (i = 0; i < g_packet_count; i++) { 
+				packet_data[0] = i + 1;
+				packet_data[1] = g_packet_count;
+				ret = ble_client_operation_write(ctx_list[0], attr_handle, packet);
+			
+				if (ret != BLE_MANAGER_SUCCESS) {
+					send_fail++;
+					RMC_LOG(RMC_CLIENT_TAG, "Fail[X] (%d / %d) [%d]\n", i + 1, g_packet_count, ret);
+				} else {
+					send_ok++;
+					RMC_LOG(RMC_CLIENT_TAG, "Success (%d / %d)\n", i + 1, g_packet_count);
+				}
+			}
+			RMC_LOG(RMC_TAG, "[[ Total Success : %d / %d\t]]\n", send_ok, g_packet_count);
+		}
+		
+		if (argc == 3 && strncmp(argv[2], "indicate", 9) == 0) {
+			static int g_packet_size = 4; 
+			static int g_packet_count = 10;
+			RMC_LOG(RMC_CLIENT_TAG, "Send %d Bytes indicate %d times.\n", g_packet_size, g_packet_count);
+
+			ble_data data;
+			uint8_t data2[4] = { 1, 1, 1, 1 };
+
+			int i;
+			int send_ok = 0;
+			int send_fail = 0;
+
+			for (i = 0; i < g_packet_count; i++) { 
+				data.data = data2;
+				data.length = sizeof(data2);
+				ret = ble_server_charact_indicate(0x6c, 0, &data);
+				data2[3]++;
+				if (ret != BLE_MANAGER_SUCCESS) {
+					send_fail++;
+					RMC_LOG(RMC_TAG, "Fail[X] (%d / %d) [%d]\n", i + 1, g_packet_count, ret);
+				} else {
+					send_ok++;
+					RMC_LOG(RMC_CLIENT_TAG, "Success (%d / %d)\n", i + 1, g_packet_count);
+				}
+			}
+			RMC_LOG(RMC_TAG, "[[ Total Success : %d / %d\t]]\n", send_ok, g_packet_count);
+		}
+	}
+
+	/* server send notify */
+	if (strncmp(argv[1], "send", 5) == 0) {
+		if (argc == 3 && strncmp(argv[2], "notify", 7) == 0) {
+			char msg_buffer[2];
+			memset(msg_buffer, 0, sizeof(msg_buffer));
+			RMC_LOG(RMC_SERVER_TAG, "[NOTI] CONN : %d \n", 0);
+			ble_data data;
+			uint8_t data1[4] = { 1, 1, 3, 3 };
+
+			data.data = data1;
+			data.length = sizeof(data1);
+			ret = ble_server_charact_notify(0x6c, 0, &data);
+			if (ret != BLE_MANAGER_SUCCESS) {
+				RMC_LOG(RMC_TAG, "noti1-1 fail[%d]\n", ret);
+			}
+			RMC_LOG(RMC_TAG, "noti1-1 OK\n");
+		}
+		if (argc == 3 && strncmp(argv[2], "indicate", 9) == 0) {
+			char msg_buffer[2];
+			memset(msg_buffer, 0, sizeof(msg_buffer));
+			RMC_LOG(RMC_SERVER_TAG, "[NOTI] CONN : %d \n", 0);
+			ble_data data;
+			uint8_t data2[4] = { 2, 2, 4, 4 };
+			
+			data.data = data2;
+			data.length = sizeof(data2);
+			ret = ble_server_charact_indicate(0x6c, 0, &data);
+			if (ret != BLE_MANAGER_SUCCESS) {
+				RMC_LOG(RMC_TAG, "noti1-2 fail[%d]\n", ret);
+			}
+			RMC_LOG(RMC_TAG, "noti1-2 OK\n");
 		}
 	}
 

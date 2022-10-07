@@ -47,6 +47,7 @@ extern uint8_t ble_app_link_table_size;
 extern void *ble_tizenrt_read_sem;
 extern void *ble_tizenrt_write_sem;
 extern void *ble_tizenrt_write_no_rsp_sem;
+extern void *ble_tizenrt_indicate_sem;
 extern BLE_TIZENRT_BOND_REQ *ble_tizenrt_bond_req_info;
 extern uint8_t ble_client_connect_is_running;
 extern void *ble_tizenrt_modify_whitelist_sem;
@@ -1658,6 +1659,26 @@ T_APP_RESULT ble_tizenrt_scatternet_gcs_client_callback(T_CLIENT_ID client_id, u
                 dbg("INDICATION VALUE: %b \n",
                                 TRACE_BINARY(p_gcs_cb_data->cb_content.read_result.value_size,
                                              p_gcs_cb_data->cb_content.read_result.p_value));
+
+                T_TIZENRT_CLIENT_NOTIFICATION *indicate_result = os_mem_alloc(0, sizeof(T_TIZENRT_CLIENT_NOTIFICATION));
+                indicate_result->noti_data.data = os_mem_alloc(0, p_gcs_cb_data->cb_content.notif_ind.value_size);
+                if(indicate_result && indicate_result->noti_data.data)
+                {
+                    memcpy(indicate_result->noti_data.data, p_gcs_cb_data->cb_content.notif_ind.p_value,
+                                                    p_gcs_cb_data->cb_content.notif_ind.value_size);
+                    indicate_result->noti_data.length = p_gcs_cb_data->cb_content.notif_ind.value_size;
+                    indicate_result->handle.conn_handle = conn_id;
+                    indicate_result->handle.attr_handle = p_gcs_cb_data->cb_content.notif_ind.handle;
+                    dbg("Notification: 0x \n");
+                    for (int i = 0; i < indicate_result->noti_data.length; i++)
+                    {
+                        dbg("%x\n",indicate_result->noti_data.data[i]);
+                    }
+                    os_mem_free(indicate_result->noti_data.data);
+                    os_mem_free(indicate_result);
+                } else {
+                    debug_print("Memory allocation failed \n");
+                }
             }
             else
             {
@@ -1700,6 +1721,7 @@ T_APP_RESULT ble_tizenrt_scatternet_gcs_client_callback(T_CLIENT_ID client_id, u
 }
 
 extern TIZENERT_SRV_DATABASE tizenrt_ble_srv_database[7];
+T_SEND_DATA_RESULT g_scatternet_indicate_result = {0};
 T_APP_RESULT ble_tizenrt_scatternet_app_profile_callback(T_SERVER_ID service_id, void *p_data)
 {
     T_APP_RESULT app_result = APP_RESULT_SUCCESS;
@@ -1723,6 +1745,17 @@ T_APP_RESULT ble_tizenrt_scatternet_app_profile_callback(T_SERVER_ID service_id,
             if (p_param->event_data.send_data_result.cause == GAP_SUCCESS)
             {
                 debug_print("PROFILE_EVT_SEND_DATA_COMPLETE success \n");
+                g_scatternet_indicate_result.credits = p_param->event_data.send_data_result.credits;
+                g_scatternet_indicate_result.cause = p_param->event_data.send_data_result.cause,
+                g_scatternet_indicate_result.service_id = p_param->event_data.send_data_result.service_id,
+                g_scatternet_indicate_result.attrib_idx = p_param->event_data.send_data_result.attrib_idx,
+                g_scatternet_indicate_result.conn_id = p_param->event_data.send_data_result.conn_id;
+                if(os_mutex_give(ble_tizenrt_indicate_sem))
+                {
+                    debug_print("recieve indicate response \n");
+                } else {
+                    debug_print("fail to give indicate semaphore \n");
+                }
             }
             else
             {
