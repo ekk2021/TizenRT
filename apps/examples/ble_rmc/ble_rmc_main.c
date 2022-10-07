@@ -804,6 +804,16 @@ int ble_rmc_main(int argc, char *argv[])
 			RMC_LOG(RMC_SERVER_TAG, "Set adv resp data ... ok\n");
 		}
 
+		if (argc == 3 && strncmp(argv[2], "type", 5) == 0) {
+			ble_addr passin_addr;
+			ret = ble_server_set_adv_type(BLE_ADV_TYPE_NONCONN_IND, &passin_addr);
+			if (ret != BLE_MANAGER_SUCCESS) {
+				RMC_LOG(RMC_SERVER_TAG, "Fail to set adv type [%d]\n", ret);
+				goto ble_rmc_done;
+			}
+			RMC_LOG(RMC_SERVER_TAG, "Done set adv type ... ok\n");
+		}
+
 		if (argc == 3 && strncmp(argv[2], "start", 6) == 0) {
 			ret = ble_server_start_adv();
 			if (ret != BLE_MANAGER_SUCCESS) {

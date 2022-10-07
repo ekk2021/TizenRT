@@ -510,18 +510,6 @@ trble_result_e rtw_ble_server_disconnect(trble_conn_handle con_handle)
 
 trble_result_e rtw_ble_server_start_adv(void)
 {
-    uint8_t link_num = le_get_active_link_num();
-    if(link_num)
-    {
-        T_GAP_CONN_INFO conn_info;
-        for(uint8_t i = 0; i < link_num; i++)
-        {
-            le_get_conn_info(i, &conn_info);
-            if(conn_info.role == GAP_LINK_ROLE_SLAVE)
-                return TRBLE_FAIL;
-        }
-    }
-
     T_GAP_DEV_STATE new_state;
     le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
 
@@ -681,7 +669,7 @@ trble_result_e rtw_ble_server_set_adv_type(trble_adv_type_e type, trble_addr *ad
     }
 
     uint8_t  adv_evt_type = type;
-
+dbg("rtw_ble_server_set_adv_type\n");
     rtw_ble_server_adv_into_idle();
 
     if(adv_evt_type == TRBLE_ADV_TYPE_DIRECT) {
