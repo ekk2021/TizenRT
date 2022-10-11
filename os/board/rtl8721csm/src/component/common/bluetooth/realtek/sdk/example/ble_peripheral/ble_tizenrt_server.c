@@ -311,7 +311,7 @@ trble_result_e rtw_ble_server_charact_indicate(trble_attr_handle attr_handle, tr
         if(os_mutex_take(ble_tizenrt_indicate_sem, 1000))
         {  
             debug_print("take indicate mutex success \n");
-            debug_print("conn_id %d att_handle 0x%x! \n", handle->conn_handle, handle->attr_handle);
+            // debug_print("conn_id %d att_handle 0x%x! \n", handle->conn_handle, handle->attr_handle);
             if(send_indication_result->cause == GAP_SUCCESS)
             {
                 debug_print("send indicate success \n");
@@ -708,7 +708,7 @@ trble_result_e rtw_ble_server_delete_bonded_device_all(void)
         if(os_mutex_take(ble_tizenrt_indicate_sem, 1000))
         {  
             debug_print("take indicate mutex success \n");
-            debug_print("conn_id %d att_handle 0x%x! \n", handle->conn_handle, handle->attr_handle);
+            // debug_print("conn_id %d att_handle 0x%x! \n", handle->conn_handle, handle->attr_handle);
             if(send_indication_result->cause == GAP_SUCCESS)
             {
                 debug_print("send indicate success \n");
