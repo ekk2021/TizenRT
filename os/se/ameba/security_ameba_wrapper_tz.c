@@ -832,6 +832,101 @@ int se_ameba_hal_delete_storage(uint32_t ss_idx)
 	return ret;
 }
 
+
+// Secure boot key injection test API
+int se_ameba_hal_enable_secureboot(void)
+{
+	uint32_t result;
+	
+	lldbg("\n\r BEFORE - Secure Boot EN  \n");
+	result = ameba_hal_enable_secureboot();
+	lldbg("\n\r Secure Boot EN result : %d \n", result);
+
+	return result;
+}
+
+int se_ameba_hal_read_secureboot_en(void)
+{
+	uint32_t result;
+
+	result = ameba_hal_read_secureboot_en( );
+	lldbg("\n\r Read Secure Boot EN result : %d \n", result);
+}
+
+
+int se_ameba_hal_enable_rdp(void)
+{
+	uint32_t result;
+	
+	lldbg("\n\r BEFORE - RDP EN  \n");
+	result = ameba_hal_enable_rdp( );
+	lldbg("\n\r RDP EN result : %d \n", result);
+
+	return result;
+}
+
+int se_ameba_hal_read_rdp_en(void)
+{
+	uint32_t result;
+
+	result = ameba_hal_read_rdp_en( );
+	lldbg("\n\r Read RDP EN result : %d \n", result);	
+}
+
+
+int se_ameba_hal_write_secureboot_key(void)
+{
+	uint32_t result;
+	uint8_t data[] = {0x72, 0xB2, 0xE1, 0xCB, 0x0E, 0x8F, 0x71, 0x52, 0x62, 0xAF,	0x38, 0xDF, 0xA0, 0xE5, 0x22, 0xC9, 
+						0x56, 0x60, 0xD0, 0xEB, 0xFD, 0x92, 0x0F, 0x4B, 0x1A, 0x22, 0x98, 0x45, 0xE5, 0x99, 0xC6, 0x97};
+	uint32_t len = (sizeof(data)/sizeof(uint8_t));
+
+	result = ameba_hal_write_secureboot_key(len, data);
+	lldbg("\n\r Write Secure Boot Key result : %d \n", result);
+
+	return result;
+}
+
+
+int se_ameba_hal_read_secureboot_key(void)
+{
+	uint32_t len = 32;
+	uint8_t map_data[32] = {0};
+
+	ameba_hal_read_secureboot_key(len, map_data);
+	for (uint32_t Idx = 0; Idx < len; Idx++) {
+		lldbg("\n\r Secure Boot Key in EFUSE Map: 0x%02x \n", map_data[Idx]);		
+	}
+
+	return 0;
+}
+
+int se_ameba_hal_write_rdp_key(void)
+{
+	uint32_t result;
+	uint8_t data[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff,
+						0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00,	0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+	uint32_t len = (sizeof(data)/sizeof(uint8_t));
+
+	result = ameba_hal_write_rdp_key(len, data);
+	lldbg("\n\r Write RDP Key result : %d \n", result);	
+
+	return result;
+}
+
+int se_ameba_hal_read_rdp_key(void)
+{
+	uint32_t len = 32;
+	uint8_t map_data[32] = {0};
+
+	ameba_hal_read_rdp_key(len, map_data);
+	for (uint32_t Idx = 0; Idx < len; Idx++) {
+		lldbg("\n\r RDP Key in EFUSE Map: 0x%02x \n", map_data[Idx]);
+	}
+
+	return 0;
+}
+
 static struct sec_ops_s g_ameba_ops_s = {
 	se_ameba_hal_init,
 	se_ameba_hal_deinit,

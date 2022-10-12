@@ -67,6 +67,35 @@ int main(int argc, FAR char *argv[])
 int hello_main(int argc, char *argv[])
 #endif
 {
+
+	if(argc==2) {
+		if(strncmp(argv[1], "sb_en", 6) == 0) {
+			se_ameba_hal_enable_secureboot();
+		}
+		else if(strncmp(argv[1], "read_sb_en", 11) == 0) {
+			se_ameba_hal_read_secureboot_en();
+		}
+		else if(strncmp(argv[1], "rdp_en", 7) == 0) {
+			se_ameba_hal_enable_rdp();
+		}
+		else if(strncmp(argv[1], "read_rdp_en", 11) == 0) {
+			se_ameba_hal_read_rdp_en();
+		}
+		else if(strncmp(argv[1], "write_sb_key", 13) == 0) {
+			se_ameba_hal_write_secureboot_key();
+		}
+		else if(strncmp(argv[1], "read_sb_key", 12) == 0) {
+			se_ameba_hal_read_secureboot_key();
+		}
+		else if(strncmp(argv[1], "write_rdp_key", 14) == 0) {
+			se_ameba_hal_write_rdp_key();
+		}
+		else if(strncmp(argv[1], "read_rdp_key", 13) == 0) {
+			se_ameba_hal_read_rdp_key();
+		}
+		
+	}
+
 	printf("Hello, World!!\n");
 	return 0;
 }
