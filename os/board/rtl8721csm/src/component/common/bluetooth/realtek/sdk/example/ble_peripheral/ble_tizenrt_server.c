@@ -551,17 +551,17 @@ trble_result_e rtw_ble_server_disconnect(trble_conn_handle con_handle)
 
 trble_result_e rtw_ble_server_start_adv(void)
 {
-    uint8_t link_num = le_get_active_link_num();
-    if(link_num)
-    {
-        T_GAP_CONN_INFO conn_info;
-        for(uint8_t i = 0; i < link_num; i++)
-        {
-            le_get_conn_info(i, &conn_info);
-            if(conn_info.role == GAP_LINK_ROLE_SLAVE)
-                return TRBLE_FAIL;
-        }
-    }
+    // uint8_t link_num = le_get_active_link_num();
+    // if(link_num)
+    // {
+    //     T_GAP_CONN_INFO conn_info;
+    //     for(uint8_t i = 0; i < link_num; i++)
+    //     {
+    //         le_get_conn_info(i, &conn_info);
+    //         if(conn_info.role == GAP_LINK_ROLE_SLAVE)
+    //             return TRBLE_FAIL;
+    //     }
+    // }
 
     T_GAP_DEV_STATE new_state;
     le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
@@ -588,7 +588,9 @@ trble_result_e rtw_ble_server_start_adv(void)
     do
     {   
         debug_print("Waiting for adv start \n");
-        os_delay(100);
+        // BLE_TESTER_8 : Infinite wait if connection is started in os_delay
+        // os_delay(100);
+        os_delay(2000);
         le_get_gap_param(GAP_PARAM_DEV_STATE , &new_state);
     } while(new_state.gap_adv_state != GAP_ADV_STATE_ADVERTISING);
 
