@@ -330,7 +330,7 @@ int se_ameba_hal_generate_key(hal_key_type mode, uint32_t key_idx)
 
 int se_ameba_hal_generate_random(uint32_t len, hal_data *random)
 {
-	AWRAP_ENTER;
+	// AWRAP_ENTER;
 	int ret = HAL_SUCCESS;
 
 	if (len > HAL_MAX_RANDOM_SIZE) {

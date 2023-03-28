@@ -56,6 +56,42 @@
 
 #include <tinyara/config.h>
 #include <stdio.h>
+#include <string.h>
+
+#include <security/security_api.h>
+int trt_crypto_random(int *random_number)
+{
+    security_handle hnd;
+    security_error res = security_init(&hnd);
+
+
+
+    if (res != 0) {
+        printf("Fail\n  ! security_init\n");
+        return -1;
+    }
+
+    security_data random;
+    res = auth_generate_random(hnd, sizeof(int), &random);
+    if (res != 0) {
+        printf("Fail\n gen random number\n");
+        security_deinit(hnd);
+        return -1;
+    }
+
+    memcpy((void *)random_number, (void *)random.data, sizeof(int));
+
+    if (*random_number < 0) {
+        *random_number = *random_number * -1;
+    }
+
+
+    security_free_data(&random);
+    security_deinit(hnd);
+
+    return 0;
+}
+
 
 /****************************************************************************
  * hello_main
@@ -68,5 +104,23 @@ int hello_main(int argc, char *argv[])
 #endif
 {
 	printf("Hello, World!!\n");
+
+	int random_number[4];
+
+	if((argc == 2) && (strncmp(argv[1], "1", 2) == 0)) {
+		for(int i = 0 ; i < 4 ; i++) {
+			trt_crypto_random(&random_number[i]);
+			// printf("%d random_gen : %x\n", i, random_number[i]);
+		}
+        printf("generated Rand num [1st] = %x%x%x%x\n", random_number[0], random_number[1], random_number[2], random_number[3]);
+
+		for(int i = 0 ; i < 4 ; i++) {
+			trt_crypto_random(&random_number[i]);
+			// printf("%d random_gen : %x\n", i, random_number[i]);
+		}
+        printf("generated Rand num [2nd] = %x%x%x%x\n", random_number[0], random_number[1], random_number[2], random_number[3]);
+
+	}
+
 	return 0;
 }
