@@ -355,9 +355,10 @@ void board_initialize(void)
 	shell_init_rom(0, 0);
 	amebasmart_mount_partitions();
 	board_gpio_initialize();
-	board_i2c_initialize();
+	//note* rtl8730e_ub6470_initialize(0); will do i2s/i2xc initialisation
+	// board_i2c_initialize();
 	board_spi_initialize();
-	board_i2s_initialize();
+	// board_i2s_initialize();
 #ifdef CONFIG_WATCHDOG
 	amebasmart_wdg_initialize(CONFIG_WATCHDOG_DEVPATH, 5000);
 #endif
@@ -387,6 +388,9 @@ void board_initialize(void)
 #endif
 #ifdef CONFIG_AMEBASMART_BLE
 	bt_ipc_api_init_host();
+#endif
+#ifdef CONFIG_AUDIO_UB6470
+	rtl8730e_ub6470_initialize(0);
 #endif
 }
 #else
