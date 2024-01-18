@@ -94,6 +94,8 @@ static int User_SignatureCheck_OTA(Manifest_TypeDef *Manifest, SubImgInfo_TypeDe
 	ret = SBOOT_Validate_Algorithm_OTA(&AuthAlg, &HashAlg, Manifest->AuthAlg, Manifest->HashAlg);
 	
 	if (ret != 0) {
+		printf ("%s SBOOT_Validate_Algorithm_OTA failed\n", __func__);
+	
 		goto SBOOT_FAIL;
 	}
 	

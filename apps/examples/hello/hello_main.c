@@ -67,6 +67,14 @@ int main(int argc, FAR char *argv[])
 int hello_main(int argc, char *argv[])
 #endif
 {
-	printf("Hello, World!!\n");
+	printf("Hello, World!!!!\n");
+	// u32 user_addr = 0x08400000;
+	u32 user_addr = 0x8EBE000;
+#if 1
+	if (OTA_UserImageSignatureCheck(user_addr) == TRUE)
+		printf("User image check pass\n");
+	else
+		printf("User image check fail\n");
+#endif
 	return 0;
 }
