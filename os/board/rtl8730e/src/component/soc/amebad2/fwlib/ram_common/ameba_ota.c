@@ -94,9 +94,7 @@ static int User_SignatureCheck_OTA(Manifest_TypeDef *Manifest, SubImgInfo_TypeDe
 	ret = SBOOT_Validate_Algorithm_OTA(&AuthAlg, &HashAlg, Manifest->AuthAlg, Manifest->HashAlg);
 	
 	if (ret != 0) {
-		printf ("%s SBOOT_Validate_Algorithm_OTA failed\n", __func__);
-	
-		goto SBOOT_FAIL;
+				goto SBOOT_FAIL;
 	}
 	
 	
@@ -321,7 +319,7 @@ static int BOOT_OTA_AP (u32 addr)
 	Manifest_TypeDef Manifest;
 	Certificate_TypeDef Cert;
 	
-	char *APLabel[] = {"AP BL1 SRAM", "AP BL1 DRAM", "AP FIP"};
+	char *APLabel[] = {"AP XIP IMG", "AP BL1 SRAM", "AP BL1 DRAM", "AP FIP"};
 	u32 PhyAddr = (u32) addr;
 	BOOT_ImgCopy_OTA((void *)&Manifest, (void *)PhyAddr, sizeof(Manifest_TypeDef));
 	Cnt = sizeof(APLabel) / sizeof(char *);
