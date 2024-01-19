@@ -56,17 +56,72 @@
 
 #include <tinyara/config.h>
 #include <stdio.h>
+#include <debug.h>
 
+
+#include <stdlib.h>
+#include <tinyara/i2c.h>
 /****************************************************************************
  * hello_main
  ****************************************************************************/
+#define I2C_MAX_BUFFER_SIZE		100
+#define MPU9250_ADDRESS 0x68  // Device address when ADO = 1
+#define WHO_AM_I_MPU9250 0x75 // Should return 0x71
 
+void i2c_demo(void) {
+    FAR struct i2c_dev_s *i2c;
+    struct i2c_msg_s msg[2];
+    int ret;
+    uint8_t regaddr;
+    uint8_t read_data;
+	char wbuf[100] = {0};
+	char rbuf[10] = {0};
+
+	//Change i2c port here
+	i2c = up_i2cinitialize(1);
+    I2C_SETFREQUENCY(i2c,200000);
+
+    I2C_SETADDRESS(i2c, MPU9250_ADDRESS, 7);
+
+    // strncpy(wbuf, "THREE", 5);
+    // regaddr = WHO_AM_I_MPU9250;
+    // msg[0].addr = MPU9250_ADDRESS;
+    // msg[0].flags = 0;
+    // msg[0].buffer = wbuf;
+    // msg[0].length = 100;
+
+    // msg[1].addr = MPU9250_ADDRESS;
+    // msg[1].flags = I2C_M_READ;
+    // msg[1].buffer = rbuf;
+    // msg[1].length = 1;
+
+	for (int i = 0; i < I2C_MAX_BUFFER_SIZE; i++) {
+        wbuf[i] = i;
+    }
+    lldbg("I2C test start \n");
+	ret = I2C_WRITEREAD(i2c, wbuf, 100, rbuf, 5);
+	if(ret != 0) {
+        lldbg("I2C write error ret = %d! \n", ret);
+    }
+	lldbg("I2C read result: \n");
+    for (int i = 0; i < 5; i++)
+	    lldbg("%x\n", rbuf[i]);
+    //Printf should receive 4c 49 56 49 44
+    if (strcmp(rbuf, "LIVID"))
+        lldbg("receive failed\n");
+    else
+        lldbg("receive passed\n");
+    return 0;
+}
+int count = 0;
 #ifdef CONFIG_BUILD_KERNEL
 int main(int argc, FAR char *argv[])
 #else
 int hello_main(int argc, char *argv[])
 #endif
-{
-	printf("Hello, World!!\n");
-	return 0;
+{	
+	count++;
+	if (count == 2) {
+        i2c_demo();
+    }
 }

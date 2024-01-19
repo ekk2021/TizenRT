@@ -774,6 +774,8 @@ static int amebad_i2c_isr_process(struct amebad_i2c_priv_s *priv)
 #else
 		ret = rtk_i2c_write(priv->i2c_object, w_msgv->addr, &write_restart, 1, 0);
 		ret = rtk_i2c_write(priv->i2c_object, w_msgv->addr, w_msgv->buffer, w_msgv->length, 1);
+		if (ret != w_msgv->length)
+			ret = FAIL;
 #endif
         }
 	if ((r_msgv->flags & I2C_M_READ) != 0) {
@@ -785,6 +787,8 @@ static int amebad_i2c_isr_process(struct amebad_i2c_priv_s *priv)
 #else
 		rtk_i2c_write(priv->i2c_object, r_msgv->addr, &write_restart, 1, 0);
 		ret = rtk_i2c_read(priv->i2c_object, r_msgv->addr, r_msgv->buffer, r_msgv->length, 1);
+		if (ret != r_msgv->length)
+			ret = FAIL;
 #endif
 	}
 
@@ -800,6 +804,8 @@ static int amebad_i2c_isr_process(struct amebad_i2c_priv_s *priv)
 #else
 		ret = rtk_i2c_write(priv->i2c_object, priv->msgv->addr, w_msgv->buffer, w_msgv->length, 1);
 #endif
+		if (ret != w_msgv->length)
+			ret = FAIL;
 	}
 	else if ((w_msgv->flags & I2C_M_READ) != 0) {
 
@@ -810,14 +816,18 @@ static int amebad_i2c_isr_process(struct amebad_i2c_priv_s *priv)
 #else
 		ret = rtk_i2c_read(priv->i2c_object, priv->msgv->addr, w_msgv->buffer, w_msgv->length, 1);
 #endif
+		if (ret != w_msgv->length)
+			ret = FAIL;
 	}
 
 #endif  /* #ifdef CONFIG_I2C_WRITEREAD */
 
 	priv->intstate = INTSTATE_DONE;
 
-	return ret;
+	if (ret != FAIL)
+		return OK;
 
+	return ret;
 }
 
 /************************************************************************************
