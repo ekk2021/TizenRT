@@ -64,17 +64,37 @@
 #ifdef CONFIG_BUILD_KERNEL
 int main(int argc, FAR char *argv[])
 #else
+static int count = 0;
 int hello_main(int argc, char *argv[])
 #endif
 {
-	printf("Hello, World!!!!\n");
 	// u32 user_addr = 0x08400000;
 	u32 user_addr = 0x8EBE000;
-#if 1
+
+    if(count == 0) {
+    	printf("Hello, World!!!!\n");
+        count++;
+        return;
+    
+    }
+
+	printf("Hello, World to image verification !!!!\n");
+
+#if 0
 	if (OTA_UserImageSignatureCheck(user_addr) == TRUE)
 		printf("User image check pass\n");
 	else
 		printf("User image check fail\n");
 #endif
+
+#if 1
+	printf("Kernel_image_verification!!\n");
+	u32 kernel_addr = 0x875F000;
+	if (OTA_KernelImageSignatureCheck(kernel_addr) == TRUE)
+		printf ("Kernel image check pass\n");
+	else
+		printf ("Kernel image check fail\n");
+#endif
+
 	return 0;
 }
