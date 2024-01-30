@@ -70,7 +70,7 @@ static void ble_scan_state_changed_cb(ble_scan_state_e scan_state)
 static uint8_t ble_filter[] = { 0x02, 0x01, 0x05, 0x03, 0x19, 0x80, 0x01, 0x05, 0x03, 0x12, 0x18, 0x0f, 0x18 };
 
 static uint8_t g_adv_raw[] = { 
-	0x02, 0x01, 0x05, 0x03, 0x19, 0x80, 0x01, 0x05, 0x03, 0x12, 0x18, 0x0f, 0x18 
+	0x02, 0x01, 0x05, 0x03, 0x19, 0x80, 0x01, 0x05, 0x03, 0x12, 0x18, 0x0f, 0x17
 };
 static uint8_t g_adv_resp[] = {
 	0x11, 0x09, 'T', 'I', 'Z', 'E', 'N', 'R', 'T', ' ', 'T', 'E', 'S', 'T', '(', '0', '2', ')',
@@ -141,6 +141,21 @@ static void ble_device_connected_cb(ble_client_ctx *ctx, ble_device_connected *d
 
 static void ble_operation_notification_cb(ble_client_ctx *ctx, ble_attr_handle attr_handle, ble_data *read_result)
 {
+	RMC_LOG(RMC_CLIENT_TAG, "'%s' is calleddd[%p]\n", __FUNCTION__, ctx);
+	printf("attr : %x // len : %d\n", attr_handle, read_result->length);
+	if (read_result->length > 0) {
+		printf("read : ");
+		int i;
+		for (i = 0; i < read_result->length; i++) {
+			printf("%02x ", read_result->data[i]);
+		}
+		printf("\n");
+	}
+	return;
+}
+
+static void ble_operation_indication_cb(ble_client_ctx *ctx, ble_attr_handle attr_handle, ble_data *read_result)
+{
 	RMC_LOG(RMC_CLIENT_TAG, "'%s' is called[%p]\n", __FUNCTION__, ctx);
 	printf("attr : %x // len : %d\n", attr_handle, read_result->length);
 	if (read_result->length > 0) {
@@ -184,6 +199,42 @@ void restart_server(void) {
 	}
 	RMC_LOG(RMC_SERVER_TAG, "Start adv ... ok\n");
 }
+
+static void ble_server_indication_cb(ble_conn_handle con_handle, uint16_t status)
+{
+	RMC_LOG(RMC_SERVER_TAG, "'%s' is called\n", __FUNCTION__);
+	RMC_LOG(RMC_SERVER_TAG, "conn : %d\n", con_handle);
+	RMC_LOG(RMC_SERVER_TAG, "status : %d\n", status);
+	return;
+}
+
+static void ble_peri_cb_charact_rmc_sync(ble_server_attr_cb_type_e type, ble_conn_handle conn_handle, ble_attr_handle attr_handle, void* arg) {
+	printf("[######## %s : %d]\n", __FUNCTION__, __LINE__);
+}
+
+static indi_queue_ready = 0;
+static void ble_peri_cb_charact_ota(ble_server_attr_cb_type_e type, ble_conn_handle conn_handle, ble_attr_handle attr_handle, void* arg, uint16_t result, uint16_t pending) {
+	char *arg_str = "None";
+	if (arg != NULL) {
+		arg_str = (char *)arg;
+	}
+	if (result){
+		printf("[######## %s : %d] Indication failed\n", __FUNCTION__, __LINE__);
+	}
+	else{
+		printf("[######## %s : %d] Indication Ok\n", __FUNCTION__, __LINE__);
+	}
+
+	if(pending < 30) {
+		indi_queue_ready = 1;
+	}
+	else {
+		indi_queue_ready = 0;
+	}
+
+	RMC_LOG(RMC_SERVER_TAG, "[CHAR_OTA][%s] type : %d / handle : %d / attr : %02x / result : %02x / pending : %02x \n", arg_str, type, conn_handle, attr_handle, result, pending);
+}
+
 
 static void ble_server_connected_cb(ble_conn_handle con_handle, ble_server_connection_type_e conn_type, uint8_t mac[BLE_BD_ADDR_MAX_LEN])
 {
@@ -230,35 +281,128 @@ static void utc_cb_desc_b_1(ble_server_attr_cb_type_e type, ble_conn_handle conn
 	RMC_LOG(RMC_SERVER_TAG, "[DESC_A_1][%s] type : %d / handle : %d / attr : %02x \n", arg_str, type, conn_handle, attr_handle);
 }
 
+#define BLE_APP_HANDLE_SERVICE_0 (0x006b)
+#define BLE_STATE_MANAGER_RMC_HANDLE_KEY_COMMAND (0x006d)
+#define BLE_STATE_MANAGER_RMC_HANDLE_KEY_CCCD (0x006e)
+
+#define BLE_APP_HANDLE_SERVICE_1 (0x0073)
+#define BLE_APP_HANDLE_CHAR_RMC_KEY (0x0075)
+#define BLE_APP_HANDLE_DESC_RMC_KEY (0x0076)
+#define BLE_APP_HANDLE_SERVICE_2 (0x0077)
+#define BLE_APP_HANDLE_CHAR_RMC_SYNC (0x0078)
+#define BLE_STATE_MANAGER_RMC_HANDLE_OTA_SERVICE (0xff00)
+#define BLE_STATE_MANAGER_RMC_HANDLE_OTA_COMMAND (0xff01)
+#define BLE_STATE_MANAGER_RMC_HANDLE_OTA_INDI_CCCD (0xff03)
+
+
 static ble_server_gatt_t gatt_profile[] = {
 	{
 		.type = BLE_SERVER_GATT_SERVICE,
-		.uuid = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01, 0x01},
+		.uuid = {0x12,0xB6,0x6E,0x45,0xA7,0x68,0x9D,0x8D,0x9A,0x40,0x17,0x2B,0xE9,0xCB,0xF2,0x13},
 		.uuid_length = 16,
-		.attr_handle = 0x006a,
+		.attr_handle = BLE_APP_HANDLE_SERVICE_0,
+	},
+
+	{
+		.type = BLE_SERVER_GATT_CHARACT,
+		.uuid = {0x99,0xC7,0xAA,0xE7,0xF8,0x9A,0xCB,0x88,0x43,0x4C,0x44,0xCF,0x0D,0x5B,0xDA,0xF2},
+		.uuid_length = 16,
+		.property =  BLE_ATTR_PROP_RWN|BLE_ATTR_PROP_WRITE_NO_RSP,
+		.permission = BLE_ATTR_PERM_R_PERMIT|BLE_ATTR_PERM_W_PERMIT,
+		.attr_handle = BLE_STATE_MANAGER_RMC_HANDLE_KEY_COMMAND,
+		.cb = utc_cb_charact_a_1,
+		.arg = "char_1"
+	},
+
+	{
+		.type = BLE_SERVER_GATT_DESC,
+		.uuid = {0x02,0x29},
+		.uuid_length = 2,
+		.permission = BLE_ATTR_PERM_R_PERMIT|BLE_ATTR_PERM_W_PERMIT,
+		.attr_handle = BLE_STATE_MANAGER_RMC_HANDLE_KEY_CCCD,                                                             //////////////////
+		.cb = utc_cb_desc_b_1,
+		.arg = "desc_1"
+	},
+
+		
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	{
+		.type = BLE_SERVER_GATT_SERVICE,
+		.uuid = {0xAD,0xB6,0x6E,0x45,0xA7,0x68,0x9D,0x8D,0x9A,0x40,0x17,0x2B,0xE9,0xCB,0xF2,0x13},
+		.uuid_length = 16,
+		.attr_handle = BLE_APP_HANDLE_SERVICE_1,
 	},
 
 	{
 		.type = BLE_SERVER_GATT_CHARACT, 
-		.uuid = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01, 0x02}, 
-		.uuid_length = 16, 
-		.property = BLE_ATTR_PROP_RWN | BLE_ATTR_PROP_WRITE_NO_RSP, 
-		.permission = BLE_ATTR_PERM_R_PERMIT | BLE_ATTR_PERM_W_PERMIT, 
-		.attr_handle = 0x006b, 
+		.uuid = {0x04,0xC7,0xAA,0xE7,0xF8,0x9A,0xCB,0x88,0x43,0x4C,0x44,0xCF,0x0D,0x5B,0xDA,0xF2}, 
+		.uuid_length = 16,
+		.property =  BLE_ATTR_PROP_RWN|BLE_ATTR_PROP_WRITE_NO_RSP, 
+		.permission = BLE_ATTR_PERM_R_PERMIT|BLE_ATTR_PERM_W_PERMIT,
+		.attr_handle = BLE_APP_HANDLE_CHAR_RMC_KEY, 
 		.cb = utc_cb_charact_a_1, 
-		.arg = "char_a_1"
+		.arg = "char_2"
+	},
+
+	{
+		.type = BLE_SERVER_GATT_DESC,
+		.uuid = {0x02,0x29}, 
+		.uuid_length = 2,
+		.permission = BLE_ATTR_PERM_R_PERMIT|BLE_ATTR_PERM_W_PERMIT,
+		.attr_handle = BLE_APP_HANDLE_DESC_RMC_KEY, 
+		.cb = utc_cb_desc_b_1, 
+		.arg = "desc_2"
+	},
+////	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+	{
+		.type = BLE_SERVER_GATT_SERVICE, 
+		.uuid = {0xF4,0x7A,0x07,0x08,0xFD,0xC7,0x9D,0xB5,0xFF,0x4E,0x85,0xDE,0x48,0x80,0xFE,0xA2},
+		.uuid_length = 16,
+		.attr_handle = BLE_APP_HANDLE_SERVICE_2,
+	},
+
+	{
+		.type = BLE_SERVER_GATT_CHARACT, 
+		.uuid = {0x06,0xC7,0xAA,0xE7,0xF8,0x9A,0xCB,0x88,0x43,0x4C,0x44,0xCF,0x0D,0x5B,0xDA,0xBB}, 
+		.uuid_length = 16,
+		.property =  BLE_ATTR_PROP_RWN|BLE_ATTR_PROP_WRITE_NO_RSP, 
+		.permission = BLE_ATTR_PERM_R_PERMIT|BLE_ATTR_PERM_W_PERMIT,
+		.attr_handle = BLE_APP_HANDLE_CHAR_RMC_SYNC,
+		.cb = ble_peri_cb_charact_rmc_sync, .arg = "char_3"
+	},
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	{
+		.type = BLE_SERVER_GATT_SERVICE,
+		.uuid = {0x11,0xB6,0x6E,0x45,0xA7,0x68,0x9D,0x8D,0x9A,0x40,0x17,0x2B,0xE9,0xCB,0xF2,0x13},
+		.uuid_length = 16,
+		.attr_handle = BLE_STATE_MANAGER_RMC_HANDLE_OTA_SERVICE,
+	},
+
+	{
+		.type = BLE_SERVER_GATT_CHARACT, 
+		.uuid = {0x22,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff}, 
+		.uuid_length = 16,
+		.property =  BLE_ATTR_PROP_READ|BLE_ATTR_PROP_WRITE|BLE_ATTR_PROP_INDICATE, 
+		.permission = BLE_ATTR_PERM_R_PERMIT|BLE_ATTR_PERM_W_PERMIT,
+		.attr_handle = BLE_STATE_MANAGER_RMC_HANDLE_OTA_COMMAND, 
+		.cb = ble_peri_cb_charact_ota, 
+		.arg = "char_4"
 	},
 
 	{
 		.type = BLE_SERVER_GATT_DESC, 
-		.uuid = {0x02, 0x29}, 
-		.uuid_length = 2, 
-		.permission = BLE_ATTR_PERM_R_PERMIT | BLE_ATTR_PERM_W_PERMIT, 
-		.attr_handle = 0x006c, 
+		.uuid = {0x02,0x29}, 
+		.uuid_length = 2,
+		.permission = BLE_ATTR_PERM_R_PERMIT|BLE_ATTR_PERM_W_PERMIT,
+		.attr_handle = BLE_STATE_MANAGER_RMC_HANDLE_OTA_INDI_CCCD, 
 		.cb = utc_cb_desc_b_1, 
-		.arg = "desc_b_1",
+		.arg = "desc_4"
 	},
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 };
+
 
 static ble_scan_callback_list scan_config = {
 	ble_scan_state_changed_cb,
@@ -269,6 +413,7 @@ static ble_client_callback_list client_config = {
 	ble_device_disconnected_cb,
 	ble_device_connected_cb,
 	ble_operation_notification_cb,
+	ble_operation_indication_cb,
 };
 
 static ble_server_init_config server_config = {
@@ -276,8 +421,11 @@ static ble_server_init_config server_config = {
 	ble_server_disconnected_cb,
 	ble_server_mtu_update_cb,
 	true,
-	gatt_profile, sizeof(gatt_profile) / sizeof(ble_server_gatt_t)};
+	gatt_profile, 
+	sizeof(gatt_profile) / sizeof(ble_server_gatt_t)
+};
 
+ble_client_ctx *ctx_test = NULL;
 static int ble_connect_common(ble_client_ctx *ctx, ble_addr *addr, bool is_auto)
 {
 	ble_result_e ret = BLE_MANAGER_FAIL;
@@ -292,6 +440,7 @@ static int ble_connect_common(ble_client_ctx *ctx, ble_addr *addr, bool is_auto)
 	conn_info.mtu = 240;
 	conn_info.scan_timeout = 1000;
 	conn_info.is_secured_connect = true;
+	printf("[######## %s : %d]\n", __FUNCTION__, __LINE__);
 
 	if (ctx == NULL) {
 		RMC_LOG(RMC_CLIENT_TAG, "ctx fail\n");
@@ -331,7 +480,24 @@ static int ble_connect_common(ble_client_ctx *ctx, ble_addr *addr, bool is_auto)
 	}
 	RMC_LOG(RMC_CLIENT_TAG, "Client State [ %s ]\n", __client_state_str(cli_state));
 
-	attr_handle = 0xff03;
+
+	ble_data bt_data0;
+	uint8_t data_arr0[1] = {2};
+	bt_data0.data = data_arr0;
+	bt_data0.length = 1;
+	ret = ble_client_operation_write(ctx, 0x0011, &bt_data0);
+	if (ret != BLE_MANAGER_SUCCESS) {
+		RMC_LOG(RMC_CLIENT_TAG, "Fail to write\n", ret);
+	} else {
+		RMC_LOG(RMC_CLIENT_TAG, "Success to write.\n");
+	}
+	printf("[######## %s : %d] write\n", __FUNCTION__, __LINE__); 
+
+
+	
+	printf("[################################################################ %s : %d]\n", __FUNCTION__, __LINE__);
+
+	attr_handle = 0x0014;
 	ret = ble_client_operation_enable_notification(ctx, attr_handle);
 	if (ret != BLE_MANAGER_SUCCESS) {
 		RMC_LOG(RMC_CLIENT_TAG, "Fail to enable noti handle1[%d]\n", ret);
@@ -339,13 +505,67 @@ static int ble_connect_common(ble_client_ctx *ctx, ble_addr *addr, bool is_auto)
 		RMC_LOG(RMC_CLIENT_TAG, "Success to enable noti handle1.\n");
 	}
 
-	attr_handle = 0x006e;
-	ret = ble_client_operation_enable_notification(ctx, attr_handle);
+	printf("[################################################################ %s : %d]\n", __FUNCTION__, __LINE__);
+
+
+	ble_data bt_data2;
+	uint8_t data_arr2[1] = {};
+	bt_data2.data = data_arr2;
+	bt_data2.length = 1;
+
+	ret = ble_client_operation_read(ctx,  0x0017, &bt_data2);
+
+	if (ret != BLE_MANAGER_SUCCESS) {
+		RMC_LOG(RMC_CLIENT_TAG, "Fail to read\n", ret);
+	} else {
+		RMC_LOG(RMC_CLIENT_TAG, "Success to read.\n");
+	}
+	printf("[######## %s : %d] bt_data.data %d\n", __FUNCTION__, __LINE__, bt_data2.data[0]); 
+
+	printf("[################################################################ %s : %d]\n", __FUNCTION__, __LINE__);
+
+	ble_data bt_data3;
+	uint8_t data_arr3[1] = {2};
+	bt_data3.data = data_arr3;
+	bt_data3.length = 1;
+	ret = ble_client_operation_write(ctx, 0x0017, &bt_data3);
+	if (ret != BLE_MANAGER_SUCCESS) {
+		RMC_LOG(RMC_CLIENT_TAG, "Fail to write\n", ret);
+	} else {
+		RMC_LOG(RMC_CLIENT_TAG, "Success to write.\n");
+	}
+	printf("[######## %s : %d] write\n", __FUNCTION__, __LINE__); 
+	
+	printf("[################################################################ %s : %d]\n", __FUNCTION__, __LINE__);
+
+
+	ble_data bt_data4;
+	uint8_t data_arr4[1] = {};
+	bt_data4.data = data_arr4;
+	bt_data4.length = 1;
+
+	ret = ble_client_operation_read(ctx, 0x0017, &bt_data4);
+
+	if (ret != BLE_MANAGER_SUCCESS) {
+		RMC_LOG(RMC_CLIENT_TAG, "Fail to read\n", ret);
+	} else {
+		RMC_LOG(RMC_CLIENT_TAG, "Success to read.\n");
+	}
+	printf("[######## %s : %d] bt_data.data %d\n", __FUNCTION__, __LINE__, bt_data4.data[0]); 
+
+	printf("[################################################################ %s : %d]\n", __FUNCTION__, __LINE__);
+
+
+	attr_handle = 0x0017;
+	ret = ble_client_operation_enable_indication(ctx, attr_handle);
 	if (ret != BLE_MANAGER_SUCCESS) {
 		RMC_LOG(RMC_CLIENT_TAG, "Fail to enable noti handle2[%d]\n", ret);
 	} else {
 		RMC_LOG(RMC_CLIENT_TAG, "Success to enable noti handle2.\n");
 	}
+
+
+	
 
 	return 0;
 }
@@ -372,13 +592,65 @@ static void set_scan_filter(ble_scan_filter *filter, uint8_t *raw_data, uint8_t 
 	filter->whitelist_enable = whitelist_enable;
 }
 
+static uint8_t ctoi2(char c)
+{
+	if ((c >= 'A') && (c <= 'F')) {
+		return (c - 'A' + 0x0A);
+	}
+
+	if ((c >= 'a') && (c <= 'f')) {
+		return (c - 'a' + 0x0A);
+	}
+
+	if ((c >= '0') && (c <= '9')) {
+		return (c - '0' + 0x00);
+	}
+
+	printf("[%s]Error: Hex char is invalid !!!\r\n", __func__);
+	return 0xFF;
+}
+
+bool hexdata_str_to_bd_addr2(char *str, uint8_t *addr_buf, uint8_t buf_len)
+{
+	uint32_t str_len = strlen(str);
+	uint32_t n = 0;
+	uint8_t num = 0;
+
+	if (str_len != 2 * 6 || buf_len < 6) {
+		printf("[%s]Error: Invalid bd addr string\r\n",__func__);
+		return FALSE;
+	}
+
+	addr_buf += str_len / 2 - 1;
+
+	while (n < str_len) {
+		if ((num = ctoi2(str[n++])) == 0xFF) {
+			return FALSE;
+		}
+		*addr_buf = num << 4;
+		if ((num = ctoi2(str[n++])) == 0xFF) {
+			return FALSE;
+		}
+		*addr_buf |= num;
+		addr_buf--;
+	}
+	return TRUE;
+}
+
+
 /****************************************************************************
  * ble_rmc_main
  ****************************************************************************/
+
+uint8_t gatt_counter = 0;
+
+ble_client_ctx *ctx = NULL;
 int ble_rmc_main(int argc, char *argv[])
 {
 	RMC_LOG(RMC_TAG, "- BLE Remote Test -\n");
-
+ 
+	
+	printf("[######## %s : %d] For Test\n", __FUNCTION__, __LINE__);
 	ble_result_e ret = BLE_MANAGER_FAIL;
 
 	if (argc < 2) {
@@ -731,57 +1003,17 @@ int ble_rmc_main(int argc, char *argv[])
 	}
 
 	if (strncmp(argv[1], "connect", 8) == 0) {
-		ble_client_ctx *ctx = NULL;
-		
-		/*
-		1. scan
-		2. delete bond
-		3. create ctx
-		4. connect
-		*/
+		uint8_t addrr [6] ={0};
+		hexdata_str_to_bd_addr2(argv[2], addrr, 6);
 
-		// 1. scan & delete bond
-		if (g_scan_state == 1) {
-			RMC_LOG(RMC_CLIENT_TAG, "Scan is running\n");
-			goto ble_rmc_done;
-		}
-		g_scan_state = -1;
-
-		if (argc == 3 && strncmp(argv[2], "fail", 5) == 0) {
-			memset(g_target.mac, 1, BLE_BD_ADDR_MAX_LEN);
-			g_target.type = BLE_ADDR_TYPE_PUBLIC;
+		ret = ble_manager_delete_bonded_all();
+		if (ret != BLE_MANAGER_SUCCESS) {
+			RMC_LOG(RMC_CLIENT_TAG, "fail to delete bond dev[%d]\n", ret);
 		} else {
-			ble_scan_filter filter = { 0, };
-			set_scan_filter(&filter, ble_filter, sizeof(ble_filter), false, 1500);
-			scan_config.device_scanned_cb = ble_device_scanned_cb_for_connect;
-			g_scan_done = 0;
-			ret = ble_client_start_scan(&filter, &scan_config);
-
-			if (ret != BLE_MANAGER_SUCCESS) {
-				RMC_LOG(RMC_CLIENT_TAG, "scan start fail[%d]\n", ret);
-				goto ble_rmc_done;
-			}
-
-			while (1) {
-				if (g_scan_state == 0) {
-					break;
-				}
-				usleep(100 * 1000);
-			}
-			
-			if (g_scan_done == 0) {
-				RMC_LOG(RMC_CLIENT_TAG, "No target device\n");
-				goto ble_rmc_done;
-			}
-			RMC_LOG(RMC_CLIENT_TAG, "Found device!\n");
-
-			ret = ble_manager_delete_bonded_all();
-			if (ret != BLE_MANAGER_SUCCESS) {
-				RMC_LOG(RMC_CLIENT_TAG, "fail to delete bond dev[%d]\n", ret);
-			} else {
-				RMC_LOG(RMC_CLIENT_TAG, "success to delete bond dev\n");
-			}
+			RMC_LOG(RMC_CLIENT_TAG, "success to delete bond dev\n");
 		}
+
+		printf("[######## %s : %d]\n", __FUNCTION__, __LINE__);
 
 		// 3. create ctx
 		ctx = ble_client_create_ctx(&client_config);
@@ -789,6 +1021,13 @@ int ble_rmc_main(int argc, char *argv[])
 			RMC_LOG(RMC_CLIENT_TAG, "create ctx fail\n");
 			goto ble_rmc_done;
 		}
+		
+		g_target.mac[0] = addrr[5];
+		g_target.mac[1] = addrr[4];
+		g_target.mac[2] = addrr[3];
+		g_target.mac[3] = addrr[2];
+		g_target.mac[4] = addrr[1];
+		g_target.mac[5] = addrr[0];
 
 		RMC_LOG(RMC_CLIENT_TAG, "Try to connect! [%02x:%02x:%02x:%02x:%02x:%02x]\n", 
 			g_target.mac[0],
@@ -813,6 +1052,212 @@ int ble_rmc_main(int argc, char *argv[])
 		}
 	}
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	if (strncmp(argv[1], "noti", 5) == 0) {
+		ble_data packet;
+		ble_conn_handle conn_handle = 0;
+
+		uint8_t data[4] = { 0, };
+
+		if (argc > 2) {
+			data[0] = atoi(argv[2]);
+		} else {
+			data[0] = 0x01;
+			data[1] = 0x02;
+			data[2] = 0x03;
+			data[3] = 0x04;
+		}
+
+		RMC_LOG(RMC_SERVER_TAG, "Send Noti Value : %02x %02x %02x %02x\n", data[0], data[1], data[2], data[3]);
+		
+		packet.data = (uint8_t *)data;
+		packet.length = sizeof(data);
+		
+		ret = ble_server_charact_notify(BLE_STATE_MANAGER_RMC_HANDLE_KEY_COMMAND, 24, &packet);
+		if (ret != BLE_MANAGER_SUCCESS) {
+			RMC_LOG(RMC_SERVER_TAG, "Notify Value fail[%d]\n", ret);
+		} else {
+			RMC_LOG(RMC_SERVER_TAG, "[NOTI] Send Noti OK\n");
+		}
+	}
+
+	if (strncmp(argv[1], "indi", 5) == 0) {
+			
+		printf("[######## %s : %d]\n", __FUNCTION__, __LINE__);
+		ble_data packet;
+		ble_conn_handle conn_handle = 0;
+	
+		uint8_t data[4] = { 0, };
+
+		int loop = 0;
+		while (loop < 50) {
+				if((loop > 20) && (indi_queue_ready == 0)) {
+					printf("[Wait!! ######## %s : %d] ret %d\n", __FUNCTION__, __LINE__, ret);
+					continue;
+				}
+
+				if (argc > 2) { 
+					data[0] = atoi(argv[2]);
+				} else {
+					data[0] = 0x04;
+					data[1] = 0x03;
+					data[2] = 0x02;
+					data[3] = gatt_counter;
+				}
+				gatt_counter++;
+				RMC_LOG(RMC_SERVER_TAG, "Send Indi Value : %02x %02x %02x %02x\n", data[0], data[1], data[2], data[3]);
+				
+				packet.data = (uint8_t *)data;
+				packet.length = sizeof(data);
+				
+				ret = ble_server_charact_indicate(BLE_STATE_MANAGER_RMC_HANDLE_OTA_COMMAND + 1, 24, &packet);
+				printf("[######## %s : %d] ret %d\n", __FUNCTION__, __LINE__, ret);
+				if (ret != BLE_MANAGER_SUCCESS) {
+					RMC_LOG(RMC_SERVER_TAG, "Indicate Value fail[%d]\n", ret);
+					
+					while(indi_queue_ready == 0) {
+						usleep(1000);
+					}
+					ret = ble_server_charact_indicate(BLE_STATE_MANAGER_RMC_HANDLE_OTA_COMMAND + 1, 24, &packet);
+					printf("[Retry ######## %s : %d] ret %d\n", __FUNCTION__, __LINE__, ret);					
+				} else {
+					RMC_LOG(RMC_SERVER_TAG, "[INDI] Send Indi OK\n");
+				}
+			loop++;
+		}		
+	}
+	
+	if (strncmp(argv[1], "indi2", 6) == 0) {
+			
+		printf("[######## %s : %d]\n", __FUNCTION__, __LINE__);
+		ble_data packet;
+		ble_conn_handle conn_handle = 0;
+	
+		uint8_t data[4] = { 0, };
+	
+		if (argc > 2) {
+			data[0] = atoi(argv[2]);
+		} else {
+			data[0] = 0x04;
+			data[1] = 0x03;
+			data[2] = 0x02;
+			data[3] = gatt_counter;
+		}
+		gatt_counter++;
+		RMC_LOG(RMC_SERVER_TAG, "Send Indi Value : %02x %02x %02x %02x\n", data[0], data[1], data[2], data[3]);
+		
+		packet.data = (uint8_t *)data;
+		packet.length = sizeof(data);
+		
+		ret = ble_server_charact_indicate(BLE_STATE_MANAGER_RMC_HANDLE_OTA_COMMAND + 1, 25, &packet);
+		if (ret != BLE_MANAGER_SUCCESS) {
+			printf("[######## %s : %d]\n", __FUNCTION__, __LINE__);
+			RMC_LOG(RMC_SERVER_TAG, "Indicate Value fail[%d]\n", ret);
+		} else {
+			printf("[######## %s : %d]\n", __FUNCTION__, __LINE__);
+			RMC_LOG(RMC_SERVER_TAG, "[INDI] Send Indi OK\n");
+		}
+	}
+
+
+	//use this when TPdual is slave
+	if (strncmp(argv[1], "updates", 8) == 0) {
+		
+		printf("[######## %s : %d]\n", __FUNCTION__, __LINE__);
+		ble_conn_handle conn_handle = 24;
+		ble_conn_param conn_param;
+		conn_param.min_conn_interval = 0x0010;
+		conn_param.max_conn_interval = 0x0010;
+		conn_param.slave_latency = 2;
+		conn_param.supervision_timeout = 0x00aa;
+		conn_param.role = BLE_SLAVE_CONN_PARAM_UPDATE;
+
+		ble_manager_conn_param_update(&conn_handle, &conn_param);
+	}
+	
+	//use this when TPdual is master
+	if (strncmp(argv[1], "updatem", 8) == 0) {
+		
+		printf("[######## %s : %d]\n", __FUNCTION__, __LINE__);
+		ble_conn_handle conn_handle = 16;
+		ble_conn_param conn_param;
+		conn_param.min_conn_interval = 0x0010;
+		conn_param.max_conn_interval = 0x0010;
+		conn_param.slave_latency = 2;
+		conn_param.supervision_timeout = 0x00aa;
+		conn_param.role = BLE_SLAVE_CONN_PARAM_UPDATE;
+
+		ble_manager_conn_param_update(&conn_handle, &conn_param);
+		
+	}
+
+	if (strncmp(argv[1], "read", 5) == 0) {
+		ble_data bt_data3;
+		uint8_t data_arr3[1] = {0};
+		bt_data3.data = data_arr3;
+		bt_data3.length = 1;
+		ret = ble_client_operation_read(ctx, 0x0014, &bt_data3);
+		if (ret != BLE_MANAGER_SUCCESS) {
+			RMC_LOG(RMC_CLIENT_TAG, "Fail to read\n", ret);
+		} else {
+			RMC_LOG(RMC_CLIENT_TAG, "Success to read.\n");
+		}
+		printf("[######## %s : %d] bt_data.data %d\n", __FUNCTION__, __LINE__, bt_data3.data[0]); 
+	}
+ 
+	if (strncmp(argv[1], "read_bas", 10) == 0) { 
+		ble_data bt_data3;
+		uint8_t data_arr3[1] = {0};
+		bt_data3.data = data_arr3;
+		bt_data3.length = 1;
+		ret = ble_client_operation_read(ctx, 0x001a, &bt_data3);
+		if (ret != BLE_MANAGER_SUCCESS) {
+			RMC_LOG(RMC_CLIENT_TAG, "Fail to read\n", ret);
+		} else {
+			RMC_LOG(RMC_CLIENT_TAG, "Success to read.\n");
+		}
+		printf("[######## %s : %d] bt_data.data %d\n", __FUNCTION__, __LINE__, bt_data3.data[0]); 
+	} 
+	
+	if (strncmp(argv[1], "noti_en", 8) == 0) {
+		int attr_handle = 0x0014;
+		ret = ble_client_operation_enable_notification(ctx, attr_handle);
+		if (ret != BLE_MANAGER_SUCCESS) {
+			RMC_LOG(RMC_CLIENT_TAG, "Fail to enable noti handle1[%d]\n", ret);
+		} else {
+			RMC_LOG(RMC_CLIENT_TAG, "Success to enable noti handle1.\n");
+		}
+	}
+
+	if (strncmp(argv[1], "noti_dis", 9) == 0) {
+		ble_data bt_data3;
+		uint8_t data_arr3[1] = {0};
+		bt_data3.data = data_arr3;
+		bt_data3.length = 1;
+		ret = ble_client_operation_write(ctx, 0x0014, &bt_data3);
+		if (ret != BLE_MANAGER_SUCCESS) {
+			RMC_LOG(RMC_CLIENT_TAG, "Fail to write\n", ret);
+		} else {
+			RMC_LOG(RMC_CLIENT_TAG, "Success to write.\n");
+		}
+		printf("[######## %s : %d] bt_data.data %d\n", __FUNCTION__, __LINE__, bt_data3.data[0]); 
+
+	}
+
+
+	if (strncmp(argv[1], "wrt", 4) == 0) {
+		ble_data bt_data3;
+		uint8_t data_arr3[1] = {3};
+		bt_data3.data = data_arr3;
+		bt_data3.length = 1;
+		ret = ble_client_operation_write(ctx, 0x0011, &bt_data3);
+		if (ret != BLE_MANAGER_SUCCESS) {
+			RMC_LOG(RMC_CLIENT_TAG, "Fail to write\n", ret);
+		} else {
+			RMC_LOG(RMC_CLIENT_TAG, "Success to write.\n");
+		}
+		printf("[######## %s : %d] bt_data.data %d\n", __FUNCTION__, __LINE__, bt_data3.data[0]); 
+	}
 
 	/* Server Test */
 	if (strncmp(argv[1], "server", 7) == 0) {
@@ -859,6 +1304,8 @@ int ble_rmc_main(int argc, char *argv[])
 			}
 			RMC_LOG(RMC_SERVER_TAG, "Stop adv ... ok\n");
 		}
+	
+
 	}
 
 ble_rmc_done:
