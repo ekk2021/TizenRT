@@ -244,6 +244,9 @@ endif
 ifeq ($(CONFIG_AMEBASMART_I2S),y)
 CHIP_CSRCS += amebasmart_i2s.c
 endif
+
+EXTRA_LIBS += ${TOPDIR}/board/rtl8730e/src/libs/lib_usbh_new.a
+
 ifeq ($(CONFIG_BOARDCTL_RESET),y)
 CHIP_CSRCS += amebasmart_systemreset.c
 endif
@@ -280,3 +283,4 @@ else
 #EXTRA_LIBS += $(TOPDIR)/board/
 endif
 endif
+

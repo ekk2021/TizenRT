@@ -83,7 +83,7 @@ static u8 usbh_cdc_acm_attach(usb_host_t *host)
 	usbh_set_interface(host, interface);
 
 	/* Get Communication Interface */
-	comm_if_desc = usbh_get_interface_descriptor(host, interface);
+	comm_if_desc = usbh_get_interface_descriptor(host, interface, 0);
 	if (comm_if_desc == NULL) {
 		DBG_PRINTF(MODULE_USB_CLASS, LEVEL_ERROR, "Fail to get the interface descriptor for Communication Interface Class.");
 		return status;
@@ -120,7 +120,7 @@ static u8 usbh_cdc_acm_attach(usb_host_t *host)
 		return status;
 	}
 
-	data_if_desc = usbh_get_interface_descriptor(host, interface);
+	data_if_desc = usbh_get_interface_descriptor(host, interface, 0);
 	if (data_if_desc == NULL) {
 		DBG_PRINTF(MODULE_USB_CLASS, LEVEL_ERROR, "Fail to get the interface descriptor for Data Interface Class.");
 		return status;
