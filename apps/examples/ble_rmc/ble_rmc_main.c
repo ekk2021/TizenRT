@@ -414,9 +414,25 @@ int ble_rmc_main(int argc, char *argv[])
 		} else {
 			ret = ble_manager_init(&server_config);
 			if (ret != BLE_MANAGER_SUCCESS) {
+
 				if (ret != BLE_MANAGER_ALREADY_WORKING) {
 					RMC_LOG(RMC_CLIENT_TAG, "init fail[%d]\n", ret);
 					goto ble_rmc_done;
+					
+				}
+				else {
+					ret = ble_manager_deinit();
+					if (ret != BLE_MANAGER_SUCCESS) {
+						RMC_LOG(RMC_CLIENT_TAG, "deinit fail [%d]\n", ret);
+						goto ble_rmc_done;
+					}
+					ret = ble_manager_init(&server_config);
+					if (ret != BLE_MANAGER_SUCCESS) {
+						RMC_LOG(RMC_CLIENT_TAG, "re-init fail[%d]\n", ret);
+						goto ble_rmc_done;
+
+					}
+					RMC_LOG(RMC_CLIENT_TAG, "re-init with config done[%d]\n", ret);
 				}
 				RMC_LOG(RMC_CLIENT_TAG, "init is already done\n");
 			} else {
