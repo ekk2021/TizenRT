@@ -1,0 +1,549 @@
+diff --git a/apps/examples/ble_rmc/ble_rmc_main.c b/apps/examples/ble_rmc/ble_rmc_main.c
+index 56e5dba..161529e 100644
+--- a/apps/examples/ble_rmc/ble_rmc_main.c
++++ b/apps/examples/ble_rmc/ble_rmc_main.c
+@@ -70,11 +70,16 @@ static void ble_scan_state_changed_cb(ble_scan_state_e scan_state)
+ static uint8_t ble_filter[] = { 0x02, 0x01, 0x05, 0x03, 0x19, 0x80, 0x01, 0x05, 0x03, 0x12, 0x18, 0x0f, 0x18 };
+ 
+ static uint8_t g_adv_raw[] = { 
+-	0x02, 0x01, 0x05, 0x03, 0x19, 0x80, 0x01, 0x05, 0x03, 0x12, 0x18, 0x0f, 0x18 
++	0x02, 0x01, 0x05, 0x03, 0x19, 0x80, 0x01, 0x05, 0x03, 0x12, 0x18, 0x0f, 0x17
++};
++	
++static uint8_t g_adv_raw_2[] = { 
++	0x02, 0x01, 0x05, 0x03, 0x19, 0x80, 0x01, 0x05, 0x03, 0x12, 0x18, 0x0f, 0x18
+ };
+ static uint8_t g_adv_resp[] = {
+-	0x11, 0x09, 'T', 'I', 'Z', 'E', 'N', 'R', 'T', ' ', 'T', 'E', 'S', 'T', '(', '0', '2', ')',
++	0x11, 0x09, '1', 'I', 'Z', 'E', 'N', 'R', 'T', ' ', 'T', 'E', 'S', 'T', '(', '0', '2', ')',
+ };
++static uint8_t g_adv_resp_2[] = {0,};
+ 
+ static void ble_device_scanned_cb_for_test(ble_scanned_device *scanned_device)
+ {
+@@ -212,6 +217,12 @@ static void ble_server_mtu_update_cb(ble_conn_handle con_handle, uint16_t mtu_si
+ 	return;
+ }
+ 
++static void ble_server_oneshot_adv_cb(ble_conn_handle con_handle, uint16_t adv_result)
++{
++	printf("result : %d\n", adv_result);
++	return;
++}
++
+ static void utc_cb_charact_a_1(ble_server_attr_cb_type_e type, ble_conn_handle conn_handle, ble_attr_handle attr_handle, void *arg)
+ {
+ 	char *arg_str = "None";
+@@ -275,6 +286,7 @@ static ble_server_init_config server_config = {
+ 	ble_server_connected_cb,
+ 	ble_server_disconnected_cb,
+ 	ble_server_mtu_update_cb,
++	ble_server_oneshot_adv_cb,
+ 	true,
+ 	gatt_profile, sizeof(gatt_profile) / sizeof(ble_server_gatt_t)};
+ 
+@@ -812,6 +824,34 @@ int ble_rmc_main(int argc, char *argv[])
+ 			ctx_list[ctx_count++] = ctx;
+ 		}
+ 	}
++	
++	if (strncmp(argv[1], "adv", 4) == 0) {
++		int ret = 0xff;
++		ble_data adv_data_1[1] = { 0, };
++		ble_data scan_rsp_data_1[1] = { 0, };
++		uint8_t type1 = 0;
++		uint8_t type2 = 3;
++
++		while(1){
++			usleep(80000);
++			adv_data_1->data = g_adv_raw;
++			adv_data_1->length = sizeof(g_adv_raw);
++			
++			scan_rsp_data_1->data = g_adv_resp;
++			scan_rsp_data_1->length = sizeof(g_adv_resp);
++			
++			ret = ble_server_one_shot_adv(adv_data_1, scan_rsp_data_1, type1);
++
++			usleep(20000);
++			adv_data_1->data = g_adv_raw_2;
++			adv_data_1->length = sizeof(g_adv_raw_2);
++			
++			scan_rsp_data_1->data = g_adv_resp_2;
++			scan_rsp_data_1->length = sizeof(g_adv_resp_2);
++			
++			ret = ble_server_one_shot_adv(adv_data_1, scan_rsp_data_1, type2);
++		}
++	}
+ 
+ 
+ 	/* Server Test */
+diff --git a/apps/examples/ble_tester/ble_tester_main.c b/apps/examples/ble_tester/ble_tester_main.c
+index 63fcd8f..3093308 100644
+--- a/apps/examples/ble_tester/ble_tester_main.c
++++ b/apps/examples/ble_tester/ble_tester_main.c
+@@ -264,6 +264,13 @@ static void ble_server_mtu_update_cb(ble_conn_handle con_handle, uint16_t mtu_si
+ 	return;
+ }
+ 
++static void ble_server_oneshot_adv_cb(ble_conn_handle con_handle, uint16_t adv_result)
++{
++	RMC_LOG(RMC_SERVER_TAG, "'%s' is called\n", __FUNCTION__);
++	RMC_LOG(RMC_SERVER_TAG, "conn : %d\n", con_handle);
++	RMC_LOG(RMC_SERVER_TAG, "result : %d\n", adv_result);
++	return;
++}
+ 
+ static void utc_cb_charact_a_1(ble_server_attr_cb_type_e type, ble_conn_handle conn_handle, ble_attr_handle attr_handle, void *arg)
+ {
+@@ -389,8 +396,11 @@ static ble_server_init_config server_config = {
+ 	ble_server_connected_cb,
+ 	ble_server_disconnected_cb,
+ 	ble_server_mtu_update_cb,
++	ble_server_oneshot_adv_cb,
+ 	true,
+-	gatt_profile, sizeof(gatt_profile) / sizeof(ble_server_gatt_t)};
++	gatt_profile, 
++	sizeof(gatt_profile) / sizeof(ble_server_gatt_t)
++};
+ 
+ static int ble_connect_common(bool is_auto)
+ {
+diff --git a/framework/include/ble_manager/ble_server.h b/framework/include/ble_manager/ble_server.h
+index 647e863..49e3d50 100644
+--- a/framework/include/ble_manager/ble_server.h
++++ b/framework/include/ble_manager/ble_server.h
+@@ -112,11 +112,13 @@ typedef struct {
+ typedef void (*ble_server_connected_t)(ble_conn_handle con_handle, ble_server_connection_type_e conn_type, uint8_t mac[BLE_BD_ADDR_MAX_LEN]);
+ typedef void (*ble_server_disconnected_t)(ble_conn_handle con_handle, uint16_t cause);
+ typedef void (*ble_server_mtu_update_t)(ble_conn_handle con_handle, uint16_t mtu_size);
++typedef void (*ble_server_oneshot_adv_t)(ble_conn_handle con_handle, uint16_t adv_result);
+ 
+ typedef struct {
+ 	ble_server_connected_t connected_cb;
+ 	ble_server_disconnected_t disconnected_cb;
+ 	ble_server_mtu_update_t mtu_update_cb;
++	ble_server_oneshot_adv_t oneshot_adv_cb;
+ 	// true : Secure Manager is enabled. Bondable.
+ 	// false : Secure Manager is disabled. Requesting Pairing will be rejected. Non-Bondable.
+ 	bool is_secured_connect_allowed; 
+diff --git a/framework/src/ble_manager/ble_manager_api.c b/framework/src/ble_manager/ble_manager_api.c
+index c2ddbbf..14bd11b 100644
+--- a/framework/src/ble_manager/ble_manager_api.c
++++ b/framework/src/ble_manager/ble_manager_api.c
+@@ -445,6 +445,15 @@ ble_result_e ble_server_start_adv(void)
+ 	RETURN_RESULT(res, msg);
+ }
+ 
++ble_result_e ble_server_one_shot_adv(ble_data *data_adv, ble_data *data_scan_rsp, uint8_t type)
++{
++	blemgr_msg_params param = { 3, {(void *)data_adv, (void *)data_scan_rsp, (void *)&type}};
++	blemgr_msg_s msg = {BLE_CMD_ONE_SHOT_ADV, BLE_MANAGER_FAIL, (void *)(&param), NULL};
++	int res = blemgr_post_message(&msg);
++
++	RETURN_RESULT(res, msg);
++}
++
+ ble_result_e ble_server_stop_adv(void)
+ {
+ 	blemgr_msg_s msg = {BLE_CMD_STOP_ADV, BLE_MANAGER_FAIL, NULL, NULL};
+diff --git a/framework/src/ble_manager/ble_manager_event.h b/framework/src/ble_manager/ble_manager_event.h
+index 180408d..55e49b8 100644
+--- a/framework/src/ble_manager/ble_manager_event.h
++++ b/framework/src/ble_manager/ble_manager_event.h
+@@ -78,6 +78,7 @@ typedef enum {
+ 	BLE_CMD_SET_ADV_TXPOWER,
+ 	BLE_CMD_START_ADV,
+ 	BLE_CMD_STOP_ADV,
++	BLE_CMD_ONE_SHOT_ADV,
+ 	
+ 	// Callback Event
+ 	BLE_EVT_CLIENT_CONNECT,
+diff --git a/framework/src/ble_manager/ble_manager_lwnl.c b/framework/src/ble_manager/ble_manager_lwnl.c
+index 9632e14..24dd91b 100644
+--- a/framework/src/ble_manager/ble_manager_lwnl.c
++++ b/framework/src/ble_manager/ble_manager_lwnl.c
+@@ -493,6 +493,17 @@ trble_result_e ble_drv_stop_adv()
+ 	return res;
+ }
+ 
++trble_result_e ble_drv_one_shot_adv(trble_data *data_adv, trble_data *data_scan_rsp, uint8_t *type)
++{
++	trble_result_e res = TRBLE_SUCCESS;
++	lwnl_msg_params msg_data = { 3, {(void *)data_adv, (void *)data_scan_rsp, (void *)type} };
++	lwnl_msg msg = {BLE_INTF_NAME, {LWNL_REQ_BLE_ONE_SHOT_ADV}, sizeof(msg_data), (void *)&msg_data, (void *)&res};
++	if (_send_msg(&msg) < 0) {
++		res = TRBLE_FILE_ERROR;
++	}
++	return res;
++}
++
+ trble_result_e ble_drv_set_device_name(uint8_t* name)
+ {
+ 	trble_result_e res = TRBLE_SUCCESS;
+diff --git a/framework/src/ble_manager/ble_manager_state.c b/framework/src/ble_manager/ble_manager_state.c
+index 4e3568a..e542a4f 100644
+--- a/framework/src/ble_manager/ble_manager_state.c
++++ b/framework/src/ble_manager/ble_manager_state.c
+@@ -987,6 +987,16 @@ ble_result_e blemgr_handle_request(blemgr_msg_s *msg)
+ 		ret = ble_drv_start_adv();
+ 	} break;
+ 
++	case BLE_CMD_ONE_SHOT_ADV: {
++		BLE_STATE_CHECK;
++		blemgr_msg_params *param = (blemgr_msg_params *)msg->param;
++		trble_data *data_adv = (uint8_t *)param->param[0];
++		trble_data *data_scan_rsp = (uint8_t *)param->param[1];
++		uint8_t *type = (uint8_t *)param->param[2];
++
++		ret = ble_drv_one_shot_adv(data_adv, data_scan_rsp, type);
++	} break;
++
+ 	case BLE_CMD_STOP_ADV: {
+ 		BLE_STATE_CHECK;
+ 
+diff --git a/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_peripheral/ble_tizenrt_app.h b/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_peripheral/ble_tizenrt_app.h
+index c81da02..7f6cb09 100644
+--- a/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_peripheral/ble_tizenrt_app.h
++++ b/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_peripheral/ble_tizenrt_app.h
+@@ -56,6 +56,7 @@ typedef enum
+ 	BLE_TIZENRT_CALLBACK_TYPE_CONN = 8,
+     BLE_TIZENRT_CALLBACK_TYPE_PROFILE,
+     BLE_TIZENRT_CALLBACK_TYPE_MTU_UPDATE,
++    BLE_TIZENRT_CALLBACK_TYPE_ONESHOT_ADV,
+     BLE_TIZENRT_CALLBACK_TYPE_MAX,
+ } BLE_TIZENRT_CALLBACK_TYPE;
+ 
+diff --git a/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_peripheral/ble_tizenrt_server.c b/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_peripheral/ble_tizenrt_server.c
+index 784eefe..09f3aa4 100644
+--- a/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_peripheral/ble_tizenrt_server.c
++++ b/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_peripheral/ble_tizenrt_server.c
+@@ -709,6 +709,48 @@ trble_result_e rtw_ble_server_stop_adv(void)
+     }
+     return TRBLE_SUCCESS;
+ }
++static uint8_t g_adv_raw_2[] = { 
++	0x02, 0x01, 0x05, 0x03, 0x19, 0x80, 0x01, 0x05, 0x03, 0x12, 0x18, 0x0f, 0x19
++};
++
++uint8_t update_adv_param_for_oneshot = 0;
++trble_result_e rtw_ble_server_one_shot_adv(uint8_t* data_adv, uint16_t length_adv, uint8_t* data_scan_rsp, uint16_t length_scan_rsp, uint8_t* type)
++{
++	update_adv_param_for_oneshot = 1;
++	if(GAP_CAUSE_SUCCESS == le_adv_set_param(GAP_PARAM_ADV_EVENT_TYPE, sizeof(*type), type))
++	{
++		debug_print("Set adv type success \n");
++	} else {
++		debug_print("Set adv type fail!!! \n");
++		return TRBLE_FAIL;
++	}
++
++	if(GAP_CAUSE_SUCCESS == le_adv_set_param(GAP_PARAM_ADV_DATA, length_adv, data_adv))
++	{
++		debug_print("Set adv data success \n");
++	} else {
++		debug_print("Set adv data fail!!! \n");
++		return TRBLE_FAIL;
++	}
++
++	if(GAP_CAUSE_SUCCESS == le_adv_set_param(GAP_PARAM_SCAN_RSP_DATA, length_scan_rsp, data_scan_rsp))
++	{
++		debug_print("Set scan response data success \n");
++	} else {
++		debug_print("Set scan response fail!!! \n");
++		return TRBLE_FAIL;
++	}
++
++	if(GAP_CAUSE_SUCCESS == le_adv_update_param())
++	{
++		debug_print("Set adv update success \n");
++	} else {
++		debug_print("Set adv update fail!!! \n");
++		return TRBLE_FAIL;
++	}
++	update_adv_param_for_oneshot = 0;
++	return TRBLE_SUCCESS;
++}
+ 
+ trble_result_e rtw_ble_server_get_bonded_device(trble_bonded_device_list_s* bonded_device_list, uint16_t* device_count)
+ {
+diff --git a/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_combo.c b/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_combo.c
+index 77fa4a9..cb1d531 100644
+--- a/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_combo.c
++++ b/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_combo.c
+@@ -99,6 +99,7 @@ trble_result_e rtw_ble_combo_init(trble_client_init_config* init_client, trble_s
+     server_init_parm.profile = init_server->profile;
+     server_init_parm.connected_cb = init_server->connected_cb;
+     server_init_parm.mtu_update_cb = init_server->mtu_update_cb;
++    server_init_parm.oneshot_adv_cb = init_server->oneshot_adv_cb;
+     server_init_parm.is_secured_connect_allowed = init_server->is_secured_connect_allowed;
+ 
+     ble_tizenrt_scatternet_app_init();
+diff --git a/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_scatternet_app.c b/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_scatternet_app.c
+index 10e412c..f1e50be 100644
+--- a/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_scatternet_app.c
++++ b/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_scatternet_app.c
+@@ -39,6 +39,8 @@
+ #include "os_msg.h"
+ #include "os_mem.h"
+ #include "os_sync.h"
++#include "vendor_cmd_bt.h"
++
+ 
+ extern trble_server_init_config server_init_parm;
+ extern trble_client_init_config *client_init_parm;
+@@ -68,6 +70,13 @@ T_TIZENRT_CLIENT_READ_RESULT ble_tizenrt_scatternet_read_results[BLE_TIZENRT_SCA
+ void ble_tizenrt_scatternet_handle_callback_msg(T_TIZENRT_APP_CALLBACK_MSG callback_msg)
+ {
+     switch (callback_msg.type) {
++        case BLE_TIZENRT_CALLBACK_TYPE_ONESHOT_ADV:
++        {
++            uint16_t *adv_ret = callback_msg.u.buf;
++			printf("[######## %s : %d] *adv_ret %d\n", __FUNCTION__, __LINE__, *adv_ret);
++            server_init_parm.oneshot_adv_cb(NULL, *adv_ret);
++        }
++		break;
+         case BLE_TIZENRT_BONDED_MSG:
+         {
+             debug_print("Handle bond msg \n");
+@@ -81,8 +90,7 @@ void ble_tizenrt_scatternet_handle_callback_msg(T_TIZENRT_APP_CALLBACK_MSG callb
+                 debug_print("Bonded parameter is NULL \n");
+             } 
+         }
+-		    break;
+-                
++		break;
+ 		case BLE_TIZENRT_CONNECTED_MSG:
+ 		{
+             debug_print("Handle connected_dev msg \n");
+@@ -1202,12 +1210,47 @@ uint8_t ble_tizenrt_scatternet_parse_scanned_devname(T_LE_SCAN_INFO *scan_info, 
+     }
+     return 0;
+ }
++
++void app_vendor_callback(uint8_t cb_type, void *p_cb_data)
++{
++	T_GAP_VENDOR_CB_DATA cb_data;
++	memcpy(&cb_data, p_cb_data, sizeof(T_GAP_VENDOR_CB_DATA));
++	switch (cb_type)
++	{
++		case GAP_MSG_VENDOR_CMD_RSP:
++			switch(cb_data.p_gap_vendor_cmd_rsp->command)
++			{
++				case HCI_LE_VENDOR_EXTENSION_FEATURE2:
++				{
++					if (cb_data.p_gap_vendor_cmd_rsp->cause != 0) {
++						printf("One shot adv resp: cause 0x%x\r\n", cb_data.p_gap_vendor_cmd_rsp->cause);
++					}
++					uint16_t *adv_result = os_mem_alloc(0, sizeof(uint16_t));
++					*adv_result = cb_data.p_gap_vendor_cmd_rsp->cause;
++					
++					printf("[######## %s : %d] cb_data.p_gap_vendor_cmd_rsp->cause %d\n", __FUNCTION__, __LINE__,cb_data.p_gap_vendor_cmd_rsp->cause);
++					printf("[######## %s : %d] *adv_result %d\n", __FUNCTION__, __LINE__,*adv_result);
++					if(ble_tizenrt_scatternet_send_callback_msg(BLE_TIZENRT_CALLBACK_TYPE_ONESHOT_ADV, adv_result) == false)
++		            {
++		                os_mem_free(adv_result);
++		                debug_print("callback msg send fail \n");
++		                return APP_RESULT_PREP_QUEUE_FULL;
++		            }
++				}
++			}
++	}
++	return;
++}
++
++
++
+ /**
+   * @brief Callback for gap le to notify app
+   * @param[in] cb_type callback msy type @ref GAP_LE_MSG_Types.
+   * @param[in] p_cb_data point to callback data @ref T_LE_CB_DATA.
+   * @retval result @ref T_APP_RESULT
+   */
++extern uint8_t update_adv_param_for_oneshot;
+ T_APP_RESULT ble_tizenrt_scatternet_app_gap_callback(uint8_t cb_type, void *p_cb_data)
+ {
+     T_APP_RESULT result = APP_RESULT_SUCCESS;
+@@ -1217,6 +1260,15 @@ T_APP_RESULT ble_tizenrt_scatternet_app_gap_callback(uint8_t cb_type, void *p_cb
+ 
+     switch (cb_type)
+     {
++    case GAP_MSG_LE_ADV_UPDATE_PARAM:
++		if (update_adv_param_for_oneshot = 1){
++			if(GAP_CAUSE_SUCCESS != le_vendor_one_shot_adv())
++			{
++				printf("[######## %s : %d] le_vendor_one_shot_adv fail\n", __FUNCTION__, __LINE__);
++				return TRBLE_FAIL;
++			}
++		}
++	break;
+     case GAP_MSG_LE_SCAN_INFO:
+         APP_PRINT_INFO5("GAP_MSG_LE_SCAN_INFO:adv_type 0x%x, bd_addr %s, remote_addr_type %d, rssi %d, data_len %d",
+                         p_data->p_le_scan_info->adv_type,
+diff --git a/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_scatternet_app.h b/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_scatternet_app.h
+index 316db02..408a9d7 100644
+--- a/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_scatternet_app.h
++++ b/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_scatternet_app.h
+@@ -61,6 +61,9 @@ void ble_tizenrt_scatternet_app_handle_io_msg(T_IO_MSG io_msg);
+   * @param[in] p_cb_data point to callback data @ref T_LE_CB_DATA.
+   * @retval result @ref T_APP_RESULT
+   */
++
++void app_vendor_callback(uint8_t cb_type, void *p_cb_data);
++
+ T_APP_RESULT ble_tizenrt_scatternet_app_gap_callback(uint8_t cb_type, void *p_cb_data);
+ 
+ /**
+diff --git a/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_scatternet_app_main.c b/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_scatternet_app_main.c
+index 24ccee1..7a0f2ec 100644
+--- a/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_scatternet_app_main.c
++++ b/os/board/rtl8721csm/src/component/common/bluetooth/realtek/sdk/example/ble_scatternet/ble_tizenrt_scatternet_app_main.c
+@@ -188,7 +188,7 @@ void ble_tizenrt_scatternet_app_le_gap_init(void)
+ 	le_set_gap_param(GAP_PARAM_DEFAULT_TX_PHYS_PREFER, sizeof(tx_phys_prefer), &tx_phys_prefer);
+ 	le_set_gap_param(GAP_PARAM_DEFAULT_RX_PHYS_PREFER, sizeof(rx_phys_prefer), &rx_phys_prefer);
+ #endif
+-
++	vendor_cmd_init(app_vendor_callback);
+ }
+ 
+ /**
+diff --git a/os/board/rtl8721csm/src/component/os/tizenrt/rtk_blemgr.c b/os/board/rtl8721csm/src/component/os/tizenrt/rtk_blemgr.c
+index 95173f0..2ee7fa7 100644
+--- a/os/board/rtl8721csm/src/component/os/tizenrt/rtk_blemgr.c
++++ b/os/board/rtl8721csm/src/component/os/tizenrt/rtk_blemgr.c
+@@ -103,6 +103,7 @@ trble_result_e trble_netmgr_set_adv_interval(struct bledev *dev, uint16_t interv
+ trble_result_e trble_netmgr_set_adv_txpower(struct bledev *dev, uint16_t txpower);
+ trble_result_e trble_netmgr_start_adv(struct bledev *dev);
+ trble_result_e trble_netmgr_stop_adv(struct bledev *dev);
++trble_result_e trble_netmgr_one_shot_adv(struct bledev *dev, trble_data *data_adv, trble_data *data_scan_rsp, uint8_t* type);
+ 
+ struct trble_ops g_trble_drv_ops = {
+ 	// Common
+@@ -157,6 +158,7 @@ struct trble_ops g_trble_drv_ops = {
+ 	trble_netmgr_set_adv_txpower,
+ 	trble_netmgr_start_adv,
+ 	trble_netmgr_stop_adv,
++	trble_netmgr_one_shot_adv,
+ };
+ 
+ extern int rltk_coex_set_ble_scan_duty(uint8_t duty);
+@@ -482,3 +484,9 @@ trble_result_e trble_netmgr_start_adv(struct bledev *dev)
+ {
+ 	return rtw_ble_server_start_adv();
+ }
++
++trble_result_e trble_netmgr_one_shot_adv(struct bledev *dev, trble_data *data_adv, trble_data *data_scan_rsp, uint8_t* type)
++{
++	return rtw_ble_server_one_shot_adv(data_adv->data, data_adv->length, data_scan_rsp->data, data_scan_rsp->length, type);
++}
++
+diff --git a/os/include/tinyara/net/if/ble.h b/os/include/tinyara/net/if/ble.h
+index 6017b26..60ac6e6 100644
+--- a/os/include/tinyara/net/if/ble.h
++++ b/os/include/tinyara/net/if/ble.h
+@@ -121,6 +121,7 @@ typedef enum {
+ 	LWNL_REQ_BLE_SET_ADV_TXPOWER,
+ 	LWNL_REQ_BLE_START_ADV,
+ 	LWNL_REQ_BLE_STOP_ADV,
++	LWNL_REQ_BLE_ONE_SHOT_ADV,
+ 	LWNL_REQ_BLE_UNKNOWN
+ } lwnl_req_ble;
+ 
+@@ -248,10 +249,12 @@ typedef enum {
+ 	TRBLE_ATTR_CB_WRITING,
+ 	TRBLE_ATTR_CB_READING,
+ 	TRBLE_ATTR_CB_WRITING_NO_RSP,
+-	TRBLE_ATTR_CB_CCCD
++	TRBLE_ATTR_CB_CCCD,
++//	TRBLE_ATTR_CB_INDICATE
+ } trble_attr_cb_type_e;
+ 
+-typedef void (*trble_server_cb_t)(trble_attr_cb_type_e type, trble_conn_handle con_handle, trble_attr_handle handle, void *arg);
++//typedef void (*trble_server_cb_t)(trble_attr_cb_type_e type, trble_conn_handle con_handle, trble_attr_handle handle, void *arg, uint16_t result, uint16_t pending);
++typedef void (*trble_server_cb_t)(trble_attr_cb_type_e type, trble_conn_handle con_handle, trble_attr_handle handle, void *arg);
+ 
+ typedef enum {
+ 	TRBLE_ATTR_PROP_NONE = 0x00,
+@@ -300,11 +303,13 @@ typedef enum {
+ typedef void (*trble_server_connected_t)(trble_conn_handle con_handle, trble_server_connection_type_e conn_type, uint8_t mac[TRBLE_BD_ADDR_MAX_LEN]);
+ typedef void (*trble_server_disconnected_t)(trble_conn_handle con_handle, uint16_t cause);
+ typedef void (*trble_server_mtu_update_t)(trble_conn_handle con_handle,  uint16_t mtu_size);
++typedef void (*trble_server_oneshot_adv_t)(trble_conn_handle con_handle,  uint16_t adv_ret);
+ 
+ typedef struct {
+ 	trble_server_connected_t connected_cb;
+ 	trble_server_disconnected_t disconnected_cb;
+ 	trble_server_mtu_update_t mtu_update_cb;
++	trble_server_oneshot_adv_t oneshot_adv_cb;
+ 	// true : Secure Manager is enabled. Bondable.
+ 	// false : Secure Manager is disabled. Requesting Pairing will be rejected. Non-Bondable.
+ 	bool is_secured_connect_allowed;
+@@ -376,6 +381,7 @@ typedef trble_result_e (*trble_set_adv_interval)(struct bledev *dev, uint16_t in
+ typedef trble_result_e (*trble_set_adv_txpower)(struct bledev *dev, uint8_t txpower);
+ typedef trble_result_e (*trble_start_adv)(struct bledev *dev);
+ typedef trble_result_e (*trble_stop_adv)(struct bledev *dev);
++typedef trble_result_e (*trble_one_shot_adv)(struct bledev *dev, trble_data *data_adv, trble_data *data_scan_rsp, uint8_t* type);
+ 
+ struct trble_ops {
+ 	/* Common */
+@@ -431,6 +437,7 @@ struct trble_ops {
+ 	trble_set_adv_txpower set_adv_txpower;
+ 	trble_start_adv start_adv;
+ 	trble_stop_adv stop_adv;
++	trble_one_shot_adv one_shot_adv;
+ };
+ 
+ int trble_post_event(lwnl_cb_ble evt, void *buffer, int32_t buf_len);
+diff --git a/os/net/blemgr/bledev.c b/os/net/blemgr/bledev.c
+index e790257..0f91f93 100644
+--- a/os/net/blemgr/bledev.c
++++ b/os/net/blemgr/bledev.c
+@@ -614,6 +614,25 @@ int bledev_handle(struct bledev *dev, lwnl_req cmd, void *data, uint32_t data_le
+ 		TRBLE_DRV_CALL(ret, dev, stop_adv, (dev));
+ 	}
+ 	break;
++	case LWNL_REQ_BLE_ONE_SHOT_ADV:
++	{	
++		uint8_t *data_adv = NULL;
++		uint8_t *data_scan_rsp = NULL;
++		uint8_t *type;
++
++		lwnl_msg_params param = { 0, };
++		if (data != NULL) {
++			memcpy(&param, data, data_len);
++		} else {
++			return TRBLE_INVALID_ARGS;
++		}
++		data_adv = (uint8_t *)param.param[0];
++		data_scan_rsp = (uint8_t *)param.param[1];
++		type = (trble_conn_handle *)param.param[2];
++
++		TRBLE_DRV_CALL(ret, dev, one_shot_adv, (dev, data_adv, data_scan_rsp, type));
++	}
++	break;
+ 	case LWNL_REQ_BLE_SET_ADV_INTERVAL:
+ 	{
+ 		uint16_t interval = 0;
+diff --git a/os/net/blemgr/bledev_mgr_server.c b/os/net/blemgr/bledev_mgr_server.c
+index bc6f044..3e3e16e 100644
+--- a/os/net/blemgr/bledev_mgr_server.c
++++ b/os/net/blemgr/bledev_mgr_server.c
+@@ -38,6 +38,11 @@ static void ble_server_mtu_update_null_cb(trble_conn_handle con_handle, uint16_t
+ 	return;
+ }
+ 
++static void ble_server_oneshot_adv_cb(trble_conn_handle con_handle, uint16_t adv_result)
++{
++	return;
++}
++
+ static void ble_server_null_cb(trble_attr_cb_type_e type, trble_conn_handle linkindex, trble_attr_handle handle, void *arg)
+ {
+ 	return;
+@@ -78,6 +83,7 @@ static trble_server_init_config g_server_null_config = {
+ 	ble_server_connected_null_cb,
+ 	ble_server_disconnected_null_cb,
+ 	ble_server_mtu_update_null_cb,
++	ble_server_oneshot_adv_cb,
+ 	true,
+ 	gatt_null_profile,
+ 	sizeof(gatt_null_profile) / sizeof(trble_gatt_t)

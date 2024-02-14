@@ -709,6 +709,48 @@ trble_result_e rtw_ble_server_stop_adv(void)
     }
     return TRBLE_SUCCESS;
 }
+static uint8_t g_adv_raw_2[] = { 
+	0x02, 0x01, 0x05, 0x03, 0x19, 0x80, 0x01, 0x05, 0x03, 0x12, 0x18, 0x0f, 0x19
+};
+
+uint8_t update_adv_param_for_oneshot = 0;
+trble_result_e rtw_ble_server_one_shot_adv(uint8_t* data_adv, uint16_t length_adv, uint8_t* data_scan_rsp, uint16_t length_scan_rsp, uint8_t* type)
+{
+	update_adv_param_for_oneshot = 1;
+	if(GAP_CAUSE_SUCCESS == le_adv_set_param(GAP_PARAM_ADV_EVENT_TYPE, sizeof(*type), type))
+	{
+		debug_print("Set adv type success \n");
+	} else {
+		debug_print("Set adv type fail!!! \n");
+		return TRBLE_FAIL;
+	}
+
+	if(GAP_CAUSE_SUCCESS == le_adv_set_param(GAP_PARAM_ADV_DATA, length_adv, data_adv))
+	{
+		debug_print("Set adv data success \n");
+	} else {
+		debug_print("Set adv data fail!!! \n");
+		return TRBLE_FAIL;
+	}
+
+	if(GAP_CAUSE_SUCCESS == le_adv_set_param(GAP_PARAM_SCAN_RSP_DATA, length_scan_rsp, data_scan_rsp))
+	{
+		debug_print("Set scan response data success \n");
+	} else {
+		debug_print("Set scan response fail!!! \n");
+		return TRBLE_FAIL;
+	}
+
+	if(GAP_CAUSE_SUCCESS == le_adv_update_param())
+	{
+		debug_print("Set adv update success \n");
+	} else {
+		debug_print("Set adv update fail!!! \n");
+		return TRBLE_FAIL;
+	}
+	update_adv_param_for_oneshot = 0;
+	return TRBLE_SUCCESS;
+}
 
 trble_result_e rtw_ble_server_get_bonded_device(trble_bonded_device_list_s* bonded_device_list, uint16_t* device_count)
 {

@@ -39,6 +39,8 @@
 #include "os_msg.h"
 #include "os_mem.h"
 #include "os_sync.h"
+#include "vendor_cmd_bt.h"
+
 
 extern trble_server_init_config server_init_parm;
 extern trble_client_init_config *client_init_parm;
@@ -68,6 +70,13 @@ T_TIZENRT_CLIENT_READ_RESULT ble_tizenrt_scatternet_read_results[BLE_TIZENRT_SCA
 void ble_tizenrt_scatternet_handle_callback_msg(T_TIZENRT_APP_CALLBACK_MSG callback_msg)
 {
     switch (callback_msg.type) {
+        case BLE_TIZENRT_CALLBACK_TYPE_ONESHOT_ADV:
+        {
+            uint16_t *adv_ret = callback_msg.u.buf;
+			printf("[######## %s : %d] *adv_ret %d\n", __FUNCTION__, __LINE__, *adv_ret);
+            server_init_parm.oneshot_adv_cb(NULL, *adv_ret);
+        }
+		break;
         case BLE_TIZENRT_BONDED_MSG:
         {
             debug_print("Handle bond msg \n");
@@ -81,8 +90,7 @@ void ble_tizenrt_scatternet_handle_callback_msg(T_TIZENRT_APP_CALLBACK_MSG callb
                 debug_print("Bonded parameter is NULL \n");
             } 
         }
-		    break;
-                
+		break;
 		case BLE_TIZENRT_CONNECTED_MSG:
 		{
             debug_print("Handle connected_dev msg \n");
@@ -1202,12 +1210,47 @@ uint8_t ble_tizenrt_scatternet_parse_scanned_devname(T_LE_SCAN_INFO *scan_info, 
     }
     return 0;
 }
+
+void app_vendor_callback(uint8_t cb_type, void *p_cb_data)
+{
+	T_GAP_VENDOR_CB_DATA cb_data;
+	memcpy(&cb_data, p_cb_data, sizeof(T_GAP_VENDOR_CB_DATA));
+	switch (cb_type)
+	{
+		case GAP_MSG_VENDOR_CMD_RSP:
+			switch(cb_data.p_gap_vendor_cmd_rsp->command)
+			{
+				case HCI_LE_VENDOR_EXTENSION_FEATURE2:
+				{
+					if (cb_data.p_gap_vendor_cmd_rsp->cause != 0) {
+						printf("One shot adv resp: cause 0x%x\r\n", cb_data.p_gap_vendor_cmd_rsp->cause);
+					}
+					uint16_t *adv_result = os_mem_alloc(0, sizeof(uint16_t));
+					*adv_result = cb_data.p_gap_vendor_cmd_rsp->cause;
+					
+					printf("[######## %s : %d] cb_data.p_gap_vendor_cmd_rsp->cause %d\n", __FUNCTION__, __LINE__,cb_data.p_gap_vendor_cmd_rsp->cause);
+					printf("[######## %s : %d] *adv_result %d\n", __FUNCTION__, __LINE__,*adv_result);
+					if(ble_tizenrt_scatternet_send_callback_msg(BLE_TIZENRT_CALLBACK_TYPE_ONESHOT_ADV, adv_result) == false)
+		            {
+		                os_mem_free(adv_result);
+		                debug_print("callback msg send fail \n");
+		                return APP_RESULT_PREP_QUEUE_FULL;
+		            }
+				}
+			}
+	}
+	return;
+}
+
+
+
 /**
   * @brief Callback for gap le to notify app
   * @param[in] cb_type callback msy type @ref GAP_LE_MSG_Types.
   * @param[in] p_cb_data point to callback data @ref T_LE_CB_DATA.
   * @retval result @ref T_APP_RESULT
   */
+extern uint8_t update_adv_param_for_oneshot;
 T_APP_RESULT ble_tizenrt_scatternet_app_gap_callback(uint8_t cb_type, void *p_cb_data)
 {
     T_APP_RESULT result = APP_RESULT_SUCCESS;
@@ -1217,6 +1260,15 @@ T_APP_RESULT ble_tizenrt_scatternet_app_gap_callback(uint8_t cb_type, void *p_cb
 
     switch (cb_type)
     {
+    case GAP_MSG_LE_ADV_UPDATE_PARAM:
+		if (update_adv_param_for_oneshot = 1){
+			if(GAP_CAUSE_SUCCESS != le_vendor_one_shot_adv())
+			{
+				printf("[######## %s : %d] le_vendor_one_shot_adv fail\n", __FUNCTION__, __LINE__);
+				return TRBLE_FAIL;
+			}
+		}
+	break;
     case GAP_MSG_LE_SCAN_INFO:
         APP_PRINT_INFO5("GAP_MSG_LE_SCAN_INFO:adv_type 0x%x, bd_addr %s, remote_addr_type %d, rssi %d, data_len %d",
                         p_data->p_le_scan_info->adv_type,
