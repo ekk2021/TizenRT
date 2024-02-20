@@ -778,8 +778,7 @@ int8_t cmd_wifi_on(WiFi_InterFace_ID_t interface_id)
 
 #if RTW_AUTO_RECONNECT
 	//setup reconnection flag
-	wifi_set_autoreconnect(1);
-#endif
+	wifi_set_autoreconnect(1);cvcvc
 
 	rtw_wifi_setting_t setting;
 	wifi_get_setting(WLAN0_NAME, &setting);

@@ -102,6 +102,12 @@ trble_result_e trble_netmgr_set_adv_type(struct bledev *dev, trble_adv_type_e ad
 trble_result_e trble_netmgr_set_adv_interval(struct bledev *dev, uint16_t interval);
 trble_result_e trble_netmgr_start_adv(struct bledev *dev);
 trble_result_e trble_netmgr_stop_adv(struct bledev *dev);
+trble_result_e trble_netmgr_create_multi_adv(struct bledev *dev, uint8_t adv_event_prop, uint32_t primary_adv_interval[2],
+													 uint8_t own_addr_type, uint8_t own_addr_val[TRBLE_BD_ADDR_MAX_LEN]);
+trble_result_e trble_netmgr_delete_multi_adv(struct bledev *dev, uint8_t adv_handle);
+trble_result_e trble_netmgr_set_multi_adv_data(struct bledev *dev, uint8_t adv_handle, uint8_t *pdata, uint8_t len);
+trble_result_e trble_netmgr_start_multi_adv(struct bledev *dev, uint8_t adv_handle);
+trble_result_e trble_netmgr_stop_multi_adv(struct bledev *dev, uint8_t adv_handle);
 
 struct trble_ops g_trble_drv_ops = {
 	// Common
@@ -156,6 +162,11 @@ struct trble_ops g_trble_drv_ops = {
 	NULL,
 	trble_netmgr_start_adv,
 	trble_netmgr_stop_adv,
+	trble_netmgr_create_multi_adv,
+	trble_netmgr_delete_multi_adv,
+	trble_netmgr_set_multi_adv_data,
+	trble_netmgr_start_multi_adv,
+	trble_netmgr_stop_multi_adv,
 };
 
 trble_result_e trble_netmgr_init(struct bledev *dev, trble_client_init_config *client, trble_server_init_config *server)
@@ -464,3 +475,32 @@ trble_result_e trble_netmgr_start_adv(struct bledev *dev)
 {
 	return rtw_ble_server_start_adv();
 }
+
+trble_result_e trble_netmgr_create_multi_adv(struct bledev *dev, uint8_t adv_event_prop, uint32_t *primary_adv_interval,
+													uint8_t own_addr_type, uint8_t *own_addr_val)
+{
+	return rtw_ble_server_create_multi_adv(adv_event_prop, primary_adv_interval,
+										 own_addr_type, own_addr_val);
+}
+
+trble_result_e trble_netmgr_delete_multi_adv(struct bledev *dev, uint8_t adv_handle)
+{
+	return rtw_ble_server_delete_multi_adv(adv_handle);
+}
+
+trble_result_e trble_netmgr_set_multi_adv_data(struct bledev *dev, uint8_t adv_handle, uint8_t *pdata, uint8_t len)
+{
+	return rtw_ble_server_set_multi_adv_data(adv_handle, pdata, len);
+}
+
+trble_result_e trble_netmgr_start_multi_adv(struct bledev *dev, uint8_t adv_handle)
+{
+	return rtw_ble_server_start_multi_adv(adv_handle);
+}
+
+trble_result_e trble_netmgr_stop_multi_adv(struct bledev *dev, uint8_t adv_handle)
+{
+	return rtw_ble_server_stop_multi_adv(adv_handle);
+}
+
+
