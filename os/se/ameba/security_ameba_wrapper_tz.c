@@ -596,6 +596,27 @@ int se_ameba_hal_aes_decrypt(hal_data *enc_data, hal_aes_param *aes_param, uint3
 	if (HAL_SUCCESS != ret) {
 		return ret;
 	}
+	sedbg("key_index = %d\n", key_idx);
+	sedbg("input %p %d %p %d\n", enc_data->data, enc_data->data_len, enc_data->priv, enc_data->priv_len);
+	sedbg("output %p %d %p %d\n", dec_data->data, dec_data->data_len, dec_data->priv, dec_data->priv_len);
+	sedbg("param: mode %d %p %d offset %d nc off %d %p %p\n",
+			aes_param->mode,
+			aes_param->iv,
+			aes_param->iv_len,
+			((aes_param->iv_offset != NULL) ? *(aes_param->iv_offset) : -1),
+			((aes_param->nc_off != NULL) ? *(aes_param->nc_off) : -1),
+			aes_param->nonce_counter,
+			aes_param->stream_block);
+
+	// assert(enc_data->priv == NULL);
+	// assert(dec_data->priv == NULL);
+	// assert(enc_data->priv_len == 0);
+	// assert(dec_data->priv_len == 0);
+	// assert(enc_data->data_len == dec_data->data_len);
+	
+	// for(int i = 0 ; i < 16 ; i++) {
+	// 	sedbg("iv[%d] = 0x%x\n", i, aes_param->iv[i]);
+	// }
 
 	in_output.input_data = enc_data;
 	in_output.output_data = dec_data;
