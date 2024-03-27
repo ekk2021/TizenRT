@@ -207,6 +207,7 @@ ssize_t amebasmart_flash_read(size_t addr, void *buf, size_t length)
 		return -EFAULT;
 	}
 
+	// lldbg("addr = %p, buff = %p, length = %d\n", addr, buf, length);
 	device_mutex_lock(RT_DEV_LOCK_FLASH);
 	if ((addr & 0x3) == 0) {
 		//! if addr is 4 bytes aligned
@@ -247,6 +248,7 @@ ssize_t amebasmart_flash_read(size_t addr, void *buf, size_t length)
 static ssize_t amebasmart_bread(FAR struct mtd_dev_s *dev, off_t startblock, size_t nblocks, FAR uint8_t *buffer)
 {
 	ssize_t result;
+	// lldbg(": -- called\n");
 	result = amebasmart_flash_read(CONFIG_AMEBASMART_FLASH_BASE + (startblock << PAGE_SHIFT), buffer, nblocks << PAGE_SHIFT);
 	return result < 0 ? result : nblocks;
 }
@@ -270,6 +272,8 @@ static ssize_t amebasmart_bwrite(FAR struct mtd_dev_s *dev, off_t startblock, si
 static ssize_t amebasmart_read(FAR struct mtd_dev_s *dev, off_t offset, size_t nbytes, FAR uint8_t *buffer)
 {
 	ssize_t result;
+	// lldbg(": -- called\n");
+
 	result = amebasmart_flash_read(CONFIG_AMEBASMART_FLASH_BASE + offset, buffer, nbytes);
 	return result < 0 ? result : nbytes;
 }

@@ -57,9 +57,16 @@
 #include <tinyara/config.h>
 #include <stdio.h>
 
+
+#include <fcntl.h>
+#include <tinyara/mm/mm.h>
+#include <crc32.h>
+
 /****************************************************************************
  * hello_main
  ****************************************************************************/
+int cnt = 0;
+
 
 #ifdef CONFIG_BUILD_KERNEL
 int main(int argc, FAR char *argv[])
@@ -68,5 +75,13 @@ int hello_main(int argc, char *argv[])
 #endif
 {
 	printf("Hello, World!!\n");
+	sched_yield();
+
+
+	// for(int i = 0 ; i <680 ; i++) {
+	// 	printf("\n%d : alloc to %p", i, kmm_malloc(10000));
+	// }
+	// printf("\n End of teh alloc");
+
 	return 0;
 }

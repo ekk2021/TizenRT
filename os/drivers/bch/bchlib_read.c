@@ -127,6 +127,7 @@ ssize_t bchlib_read(FAR void *handle, FAR char *buffer, size_t offset, size_t le
 	if (sectoffset > 0) {
 		/* Read the sector into the sector buffer */
 		bchlib_readsector(bch, sector);
+		lldbg(" : 1111 ==> ENTERED \n");
 
 		/* Copy the tail end of the sector to the user buffer */
 		if (sectoffset + len > bch->sectsize) {
@@ -161,6 +162,9 @@ ssize_t bchlib_read(FAR void *handle, FAR char *buffer, size_t offset, size_t le
 
 		ret = bch->inode->u.i_bops->read(bch->inode, (FAR uint8_t *)buffer,
 						sector, nsectors);
+		
+		lldbg(" : 2222 ==> ENTERED \n");
+
 		if (ret < 0) {
 			fdbg("ERROR: Read failed: %d\n");
 			return ret;
@@ -183,6 +187,8 @@ ssize_t bchlib_read(FAR void *handle, FAR char *buffer, size_t offset, size_t le
 	if (len > 0) {
 		/* Read the sector into the sector buffer */
 		bchlib_readsector(bch, sector);
+
+		lldbg(" : 3333 ==> ENTERED \n");
 
 		/* Copy the head end of the sector to the user buffer */
 		memcpy(buffer, bch->buffer, len);

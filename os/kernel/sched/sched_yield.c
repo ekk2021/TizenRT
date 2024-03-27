@@ -91,9 +91,100 @@
  * Assumptions:
  *
  ****************************************************************************/
+#include <fcntl.h>
+#include <tinyara/mm/mm.h>
+#include <crc32.h>
+
+	uint8_t *crc_buffer;
+	uint32_t calculate_crc = 0;
+	uint32_t bin_size = 1770962;
+	uint32_t read_size;
+	size_t max_bufsize = 1738744;
+
+
+	int fd, ret;
+
+void read_bin()	
+{
+	while (bin_size > 0) {
+		read_size = bin_size < max_bufsize ? bin_size : max_bufsize;
+		lldbg("read_size = %d, bin_size = %d\n", read_size, bin_size);
+
+		ret = read(fd, (FAR uint8_t *)crc_buffer, read_size);
+		crc32part(crc_buffer, max_bufsize, calculate_crc);
+		bin_size -= read_size;
+	}
+}
+
+void test_code()
+{
+	// uint8_t *crc_buffer;
+	// uint32_t calculate_crc = 0;
+	// uint32_t bin_size = 1770962;
+	// uint32_t read_size;
+
+
+
+	lldbg("Read Kernel - start\n");
+	fd = open("/dev/mtdblock7", O_RDONLY);
+	// size_t max_bufsize = kmm_get_largest_freenode_size() / 2;
+	crc_buffer = kmm_malloc(max_bufsize);
+	lldbg("%d : alloc to %p\n", max_bufsize, crc_buffer);
+
+	// while (bin_size > 0) {
+	// 	read_size = bin_size < max_bufsize ? bin_size : max_bufsize;
+	// 	lldbg("read_size = %d, bin_size = %d\n", read_size, bin_size);
+
+	// 	ret = read(fd, (FAR uint8_t *)crc_buffer, read_size);
+	// 	crc32part(crc_buffer, max_bufsize, calculate_crc);
+	// 	bin_size -= read_size;
+	// }
+	read_bin();
+	crc32part(crc_buffer, max_bufsize, calculate_crc);
+	free(crc_buffer);
+	close(fd);
+	lldbg("Read Kernel - end\n\n");
+
+
+	fd = open("/dev/mtdblock9", O_RDONLY);
+	bin_size = 233145;
+	max_bufsize = 1213952;
+
+	lldbg("Read App2 - start\n");
+
+	crc_buffer = kmm_malloc(max_bufsize);
+	lldbg("%d : alloc to %p\n", max_bufsize, crc_buffer);
+
+	read_bin();
+	crc32part(crc_buffer, max_bufsize, calculate_crc);
+	free(crc_buffer);
+	close(fd);
+	lldbg("Read App2 - end\n\n");
+
+	lldbg("Read App1 - start\n");
+
+	fd = open("/dev/mtdblock8", O_RDONLY);
+	bin_size = 976083;
+	max_bufsize = 512000;
+
+	crc_buffer = kmm_malloc(max_bufsize);
+	lldbg("%d : alloc to %p\n", max_bufsize, crc_buffer);
+
+	read_bin();
+	crc32part(crc_buffer, max_bufsize, calculate_crc);
+	free(crc_buffer);
+	close(fd);
+	lldbg("Read App1 - end\n\n");
+
+	lldbg("End of the alloc\n");
+}
+
 
 int sched_yield(void)
 {
+	test_code();
+	return OK;
+
 #ifndef CONFIG_SCHED_YIELD_OPTIMIZATION
 
 	FAR struct tcb_s *rtcb = this_task();
