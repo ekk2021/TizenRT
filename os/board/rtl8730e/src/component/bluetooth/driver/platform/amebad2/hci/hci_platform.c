@@ -50,7 +50,7 @@
 			  ((uint32_t)(*(a + 3)) << 24);  \
 	}
 
-uint32_t hci_cfg_sw_val = 0xFF;    // Open BT Trace log & FW log use 0xDD
+uint32_t hci_cfg_sw_val = 0xDD;    // Open BT Trace log & FW log use 0xDD
 uint8_t bt_ant_switch = ANT_S1;      // Select BT RF Patch
 
 #ifndef CONFIG_RTK_DATA_BINARY_TO_EXT_FLASH 

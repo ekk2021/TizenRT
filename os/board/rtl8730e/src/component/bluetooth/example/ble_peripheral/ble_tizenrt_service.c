@@ -449,6 +449,7 @@ void ble_tizenrt_free_srv_info(struct rtk_bt_gatt_service *srv_info)
 extern uint16_t server_profile_count;
 int attr_counter = 0;
 static struct rtk_bt_gatt_service *ble_tizenrt_srv_array_ptr = NULL;
+rtk_bt_gatt_attr_t ble_tizenrt_attrs[80];                                                    //uncomment here
 trble_result_e tizenrt_add_service(uint8_t index, uint16_t app_id)
 {	
     struct rtk_bt_gatt_service ble_tizenrt_srv;
@@ -461,7 +462,8 @@ trble_result_e tizenrt_add_service(uint8_t index, uint16_t app_id)
 	ble_tizenrt_srv.assgin_handle_flag = true;
 	ble_tizenrt_srv.attr_count = tizenrt_ble_srv_database[index].att_count;
 
-	rtk_bt_gatt_attr_t ble_tizenrt_attrs[ble_tizenrt_srv.attr_count];
+	// rtk_bt_gatt_attr_t ble_tizenrt_attrs[ble_tizenrt_srv.attr_count];                           //comment here
+	printf("[######## %s : %d]ble_tizenrt_srv.attr_count %d\n", __FUNCTION__, __LINE__, ble_tizenrt_srv.attr_count* sizeof(rtk_bt_gatt_attr_t));
 	int j = 0;
 	int srv_count = 0;
 
@@ -654,8 +656,8 @@ bool parse_service_table(trble_gatt_t *profile, uint16_t profile_count)
 {
     debug_print("tizenrt_ble_service_tbl profile %p profile_count %d \n", profile, profile_count);
     abs_att_count = 0;
-    tizenrt_ble_service_tbl = (T_ATTRIB_APPL *)osif_mem_alloc(0, profile_count * sizeof(T_ATTRIB_APPL));
-    memset(tizenrt_ble_service_tbl, 0, profile_count * sizeof(T_ATTRIB_APPL));
+    // tizenrt_ble_service_tbl = (T_ATTRIB_APPL *)osif_mem_alloc(0, profile_count * sizeof(T_ATTRIB_APPL));
+    // memset(tizenrt_ble_service_tbl, 0, profile_count * sizeof(T_ATTRIB_APPL));
     uint8_t srv_index = 0;
     uint8_t char_index = 0;
     uint16_t j = 0;
@@ -666,17 +668,17 @@ bool parse_service_table(trble_gatt_t *profile, uint16_t profile_count)
             srv_index = tizenrt_ble_srv_count++;    /* add the service counter */
             char_index = 0;     /* clr the char_index when begain parse a new service */
             debug_print("Parse service decleration \n");
-            setup_ble_service_attr(&tizenrt_ble_service_tbl[j++], profile[i].uuid ,profile[i].uuid_length);
+            // setup_ble_service_attr(&tizenrt_ble_service_tbl[j++], profile[i].uuid ,profile[i].uuid_length);
             setup_ble_srv_info(srv_index, &profile[i]);
         } else if(profile[i].type ==  TRBLE_GATT_CHARACT) 
         {
-            setup_ble_char_dec_attr(&tizenrt_ble_service_tbl[j++], profile[i].uuid, profile[i].property, profile[i].uuid_length);
-            setup_ble_char_val_attr(&tizenrt_ble_service_tbl[j++], profile[i].uuid, profile[i].permission, profile[i].uuid_length);
+            // setup_ble_char_dec_attr(&tizenrt_ble_service_tbl[j++], profile[i].uuid, profile[i].property, profile[i].uuid_length);
+            // setup_ble_char_val_attr(&tizenrt_ble_service_tbl[j++], profile[i].uuid, profile[i].permission, profile[i].uuid_length);
             setup_ble_char_info(srv_index, char_index, &profile[i]);
             char_index++;
         } else if(profile[i].type ==  TRBLE_GATT_DESC)
         {
-            setup_ble_char_ccc_attr(&tizenrt_ble_service_tbl[j++], 0, profile[i].uuid_length);
+            // setup_ble_char_ccc_attr(&tizenrt_ble_service_tbl[j++], 0, profile[i].uuid_length);
             setup_ble_char_info(srv_index, char_index, &profile[i]);
             char_index++;
         }

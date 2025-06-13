@@ -625,6 +625,7 @@ bool osif_msg_peek(void *p_handle, void *p_msg, uint32_t wait_ms)
 void *osif_mem_alloc(RAM_TYPE ram_type, size_t size)
 {
 	u8 *pbuf = kmm_malloc(size);
+//printf("[osif_mem_alloc]: %x, size: %d\r\n", pbuf, size);
 #ifdef CONFIG_DEBUG_MM_HEAPINFO
 	if (pbuf)
 	{
@@ -643,6 +644,7 @@ void *osif_mem_aligned_alloc(RAM_TYPE ram_type, size_t size, uint8_t alignment)
 		size += (OSIF_ALIGN - (size & OSIF_ALIGN_MASK));
 	}
 	u8 *pbuf = kmm_memalign(alignment, size);
+//printf("[osif_mem_aligned_alloc]: %x, size: %d\r\n", pbuf, size);
 #ifdef CONFIG_DEBUG_MM_HEAPINFO
 	if (pbuf)
 	{
@@ -658,6 +660,10 @@ void *osif_mem_aligned_alloc(RAM_TYPE ram_type, size_t size, uint8_t alignment)
 /****************************************************************************/
 void osif_mem_free(void *p_block)
 {
+	size_t ret_addr = 0;
+	ARCH_GET_RET_ADDRESS(ret_addr);
+//printf("[osif_mem_free]: ret_addr %x\r\n", ret_addr);
+//printf("[osif_mem_free]: %x\r\n", p_block);
 	kmm_free(p_block);
 }
 
@@ -666,6 +672,10 @@ void osif_mem_free(void *p_block)
 /****************************************************************************/
 void osif_mem_aligned_free(void *p_block)
 {
+	size_t ret_addr = 0; 
+	ARCH_GET_RET_ADDRESS(ret_addr);
+//printf("[osif_mem_aligned_free]: ret_addr %x\r\n", ret_addr);
+//printf("[osif_mem_aligned_free]: %x\r\n", p_block);
 	kmm_free(p_block);
 }
 

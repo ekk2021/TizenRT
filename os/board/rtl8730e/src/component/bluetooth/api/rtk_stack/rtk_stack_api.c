@@ -761,6 +761,84 @@ static void bt_stack_log_config(void)
 }
 #endif
 
+#define GATT_ADDRESS_PTR 0x6011de78 /* gatt */
+#define GATT_ENTRY_ID_ADDRESS_PTR 0x6011dea0	/* gatt_entry_id */
+void print_var(void)
+{
+	u8 *pointer = GATT_ADDRESS_PTR; /* gatt */
+	u32 len = GATT_ENTRY_ID_ADDRESS_PTR - GATT_ADDRESS_PTR;
+	u32 address = 0;
+	int i;
+	printf("\n\r print_var pointer: %x size: %d \n", pointer, len);
+	pointer = pointer + 8; /* Ignore the first 8 */
+	len = len - 8 - 6; /* Ignore the first 8 and last 6 */
+	for (i = 0; i < len; i ++) {
+		if (i % 32 == 0)
+			printf("\n\r");
+		printf(" %02x", pointer[i]);
+	}
+
+	memcpy(&address, pointer, 4);
+	printf("\n\r address_1: %x\n", address);
+
+	if (address) {
+		pointer = address;
+		len = 16;
+		memcpy(&address, pointer, 4);
+		if (address) {
+			printf("\n\r pointer: %x, address: %x \n", pointer, address);
+/*
+			for (i = 0; i < len; i ++) {
+				if (i % 32 == 0)
+					printf("\n\r");
+				printf(" %02x", pointer[i]);
+			}
+			printf("\n\r");
+*/
+		}
+	}
+	pointer = GATT_ADDRESS_PTR + 8 + 4;
+	memcpy(&address, pointer, 4);
+	printf("\n\r address_2: %x\n", address);
+	if (address) {
+		pointer = address;
+		len = 16;
+		memcpy(&address, pointer, 4);
+/*
+		for (i = 0; i < len; i ++) {
+			if (i % 32 == 0)
+				printf("\n\r");
+			printf(" %02x", pointer[i]);
+		}
+		printf("\n\r");
+*/
+		if (address) {
+			printf("\n\r pointer: %x, address: %x \n", pointer, address);
+		}
+	}
+
+	pointer = GATT_ADDRESS_PTR + 8 + 4 + 4;
+	memcpy(&address, pointer, 4);
+	printf("\n\r address_3: %x\n", address);
+	if (address) {
+		pointer = address;
+		len = 16;
+		memcpy(&address, pointer, 4);
+/*
+		for (i = 0; i < len; i ++) {
+			if (i % 32 == 0)
+				printf("\n\r");
+			printf(" %02x", pointer[i]);
+		}
+		printf("\n\r");
+*/
+		if (address) {
+			printf("\n\r pointer: %x, address: %x \n", pointer, address);
+		}
+	}
+}
+
+//extern p_tx_data[]
 uint16_t bt_stack_enable(void *app_conf)
 {
 	uint16_t ret = 0;
@@ -770,21 +848,24 @@ uint16_t bt_stack_enable(void *app_conf)
 	if (ret) {
 		return ret;
 	}
+print_var();
 	//step 2 initialize GAP and other common config
 	ret = bt_stack_init(app_conf);
 	if (ret) {
 		return ret;
 	}
+print_var();
 	//step3 initialize profile
 	ret = bt_stack_profile_init(app_conf);
 	if (ret) {
 		return ret;
 	}
+print_var();
 	//step 4 stack enable
 	if (false == bt_stack_startup(app_conf)) {
 		return RTK_BT_FAIL;
 	}
-
+print_var();
 	bt_stack_le_gap_wait_ready();
 //	bt_stack_br_gap_wait_ready();
 
@@ -797,17 +878,20 @@ uint16_t bt_stack_enable(void *app_conf)
 uint16_t bt_stack_disable(void)
 {
 	uint16_t ret = 0;
-
+print_var();
+	printf("===============bt_stack_deinit=================\n");
 	ret = bt_stack_deinit();
 	if (ret) {
 		return ret;
 	}
-
+print_var();
+	printf("===============bt_stack_api_deinit=================\n");
 	ret = bt_stack_api_deinit();
 	if (ret) {
 		return ret;
 	}
-
+print_var();
+	printf("===============bt_stack_profile_deinit=================\n");
 	ret = bt_stack_profile_deinit();
 	if (ret) {
 		return ret;
@@ -817,11 +901,14 @@ uint16_t bt_stack_disable(void)
 	/* deinit flow: bte_deinit --> ble_audio_deinit -->ble_mgr_deinit */
 	// ble_mgr_deinit();
 #endif
-
+printf("===============bte_deinit_free=================\n");
+print_var();
 	/* free stack resource after api task terminated */
 	bte_deinit_free();
+print_var();
+	printf("===============bt_trace_deinit=================\n");
 	bt_trace_deinit();
-
+print_var();
 	return 0;
 }
 

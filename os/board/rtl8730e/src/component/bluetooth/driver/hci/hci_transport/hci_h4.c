@@ -271,9 +271,9 @@ static uint8_t h4_close(void)
     hci_h4->rx_run = 0;
     osif_sem_give(hci_h4->rx_ind_sema);
     osif_sem_take(hci_h4->rx_run_sema, 0xffffffff);
-
+	printf("===============bt_coex_deinit=================\n");
     bt_coex_deinit();
-
+	printf("===============HCI_SUCCESS=================\n");
     return HCI_SUCCESS;
 }
 

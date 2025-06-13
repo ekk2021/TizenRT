@@ -16,16 +16,16 @@
 #define CN_6                     '#'
 #define CN_7                     '#'
 #define CN_8                     '#'
-#define BUILDING_TIME            "Wed Apr 24 10:56:53 2024"
+#define BUILDING_TIME            "Fri Apr 11 14:58:42 2025"
 #define NAME2STR(a)              #a
 #define CUSTOMER_NAME_S          #NAME2STR(CUSTOMER_NAME)
 #define NUM4STR(a,b,c,d)         #a "." #b "." #c "." #d
 #define VERSIONBUILDSTR(a,b,c,d) NUM4STR(a,b,c,d)
 #define VERSION_BUILD_STR        VERSIONBUILDSTR(VERSION_MAJOR,VERSION_MINOR,VERSION_REVISION,VERSION_BUILD)
 #define COMMIT                   d9a7d5bce100
-#define BUILDING_TIME_STR        Wed_2024_04_24_10_56_53
-#define BUILDER                  server
-#define BUILDER_STR              server
+#define BUILDING_TIME_STR        Fri_2025_04_11_14_58_42
+#define BUILDER                  carrie_zhang
+#define BUILDER_STR              carrie_zhang
 #define TO_STR(R) NAME2STR(R)
 #define GENERATE_VERSION_MSG(MSG, VERSION, COMMIT, BUILDING_TIME, BUILDER) \
     GENERATE_VERSION_MSG_(MSG, VERSION, COMMIT, BUILDING_TIME, BUILDER)
